@@ -1,0 +1,116 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "IQKeyboardManager",
+  "projectDescription": "Codeless drop-in universal library that prevents keyboard from covering UITextField/UITextView in iOS apps",
+  "theme": "palm",
+  "primaryColor": "#242b2c",
+  "lightColor": "#040404",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "core/keyboard-management",
+              "core/configuration",
+              "core/subspecs"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/basic-setup",
+              "guides/advanced-configuration",
+              "guides/toolbar-management",
+              "guides/appearance-customization",
+              "guides/return-key-handling",
+              "guides/resign-keyboard",
+              "guides/debugging"
+            ]
+          },
+          {
+            "group": "Migration",
+            "pages": [
+              "migration/overview",
+              "migration/v7-to-v8",
+              "migration/v6-to-v7",
+              "migration/v5-to-v6"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core",
+            "pages": [
+              "api/iqkeyboardmanager",
+              "api/active-configuration",
+              "api/root-controller-configuration",
+              "api/scroll-view-configuration"
+            ]
+          },
+          {
+            "group": "Appearance",
+            "pages": [
+              "api/keyboard-appearance-configuration",
+              "api/keyboard-appearance-manager"
+            ]
+          },
+          {
+            "group": "Extensions",
+            "pages": [
+              "api/uiview-extensions",
+              "api/uiscrollview-extensions"
+            ]
+          },
+          {
+            "group": "Modules",
+            "pages": [
+              "api/toolbar-manager",
+              "api/return-manager",
+              "api/textview"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Automatic keyboard avoidance for UITextField/UITextView",
+    "Zero-code setup with single-line enablement",
+    "Modular architecture with optional subspecs",
+    "Toolbar with Previous/Next/Done buttons",
+    "Customizable keyboard appearance",
+    "Return key handling automation",
+    "Tap-to-resign keyboard functionality",
+    "Support for all UIScrollView types and orientations"
+  ],
+  "publicApiSurface": [
+    "IQKeyboardManager.shared",
+    "IQKeyboardManager.isEnabled",
+    "IQKeyboardManager.keyboardDistance",
+    "IQKeyboardManager.enableAutoToolbar",
+    "IQKeyboardManager.resignOnTouchOutside",
+    "IQKeyboardManager.keyboardConfiguration",
+    "IQActiveConfiguration",
+    "IQRootControllerConfiguration",
+    "IQScrollViewConfiguration",
+    "IQKeyboardAppearanceConfiguration",
+    "IQKeyboardAppearanceManager",
+    "UIView.iq extensions",
+    "UIScrollView.iq extensions"
+  ]
+}

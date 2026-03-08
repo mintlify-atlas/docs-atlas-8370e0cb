@@ -1,0 +1,274 @@
+---
+title: Quick Start
+description: Get IQKeyboardManager up and running in your iOS app in less than 5 minutes
+---
+
+Get started with IQKeyboardManager in just a few simple steps. This guide will have your keyboard management working in less than 5 minutes.
+
+## Prerequisites
+
+<Check>
+Make sure you've [installed IQKeyboardManager](/installation) using CocoaPods, SPM, or Carthage.
+</Check>
+
+## Setup Guide
+
+<Steps>
+  <Step title="Import the Framework">
+    Open your `AppDelegate.swift` file and import IQKeyboardManager at the top:
+
+    ```swift AppDelegate.swift
+    import UIKit
+    import IQKeyboardManagerSwift
+
+    @main
+    class AppDelegate: UIResponder, UIApplicationDelegate {
+        // ...
+    }
+    ```
+
+    <Note>
+    For SwiftUI apps with the `@main` App struct, you can use `init()` instead of AppDelegate. See the [Basic Setup guide](/guides/basic-setup) for details.
+    </Note>
+  </Step>
+
+  <Step title="Enable IQKeyboardManager">
+    In the `application(_:didFinishLaunchingWithOptions:)` method, enable the manager:
+
+    ```swift AppDelegate.swift
+    func application(_ application: UIApplication, 
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        
+        // Enable IQKeyboardManager
+        IQKeyboardManager.shared.isEnabled = true
+        
+        return true
+    }
+    ```
+
+    That's it! Your keyboard will now automatically avoid covering text fields.
+
+    <Tip>
+    This is the **minimal setup**. The keyboard distance will automatically adjust for all UITextField and UITextView instances in your app.
+    </Tip>
+  </Step>
+
+  <Step title="Optional: Configure Additional Features">
+    Customize IQKeyboardManager with additional options based on your needs:
+
+    <Tabs>
+      <Tab title="Basic Configuration">
+        Configure keyboard distance and enable debugging:
+
+        ```swift AppDelegate.swift
+        func application(_ application: UIApplication,
+                         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+            
+            // Enable keyboard management
+            IQKeyboardManager.shared.isEnabled = true
+            
+            // Set keyboard distance from text field (default is 10.0)
+            IQKeyboardManager.shared.keyboardDistance = 20.0
+            
+            // Enable debug mode to see console logs
+            IQKeyboardManager.shared.isDebuggingEnabled = true
+            
+            return true
+        }
+        ```
+      </Tab>
+
+      <Tab title="With Toolbar">
+        Add a toolbar with Previous/Next/Done buttons:
+
+        <Warning>
+        The toolbar feature requires the `IQKeyboardToolbarManager` library. In IQKeyboardManager v8+, toolbar functionality has been moved to a separate package.
+        </Warning>
+
+        ```swift AppDelegate.swift
+        import IQKeyboardManagerSwift
+        import IQKeyboardToolbarManager
+
+        func application(_ application: UIApplication,
+                         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+            
+            // Enable keyboard management
+            IQKeyboardManager.shared.isEnabled = true
+            
+            // Enable toolbar with Previous/Next/Done buttons
+            IQKeyboardToolbarManager.shared.isEnabled = true
+            
+            return true
+        }
+        ```
+
+        The toolbar automatically appears above the keyboard with:
+        - **Previous** button: Navigate to previous text field
+        - **Next** button: Navigate to next text field  
+        - **Done** button: Dismiss keyboard
+      </Tab>
+
+      <Tab title="With Tap to Dismiss">
+        Enable tap-to-dismiss keyboard functionality:
+
+        ```swift AppDelegate.swift
+        func application(_ application: UIApplication,
+                         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+            
+            // Enable keyboard management
+            IQKeyboardManager.shared.isEnabled = true
+            
+            // Enable resign on tap outside
+            IQKeyboardManager.shared.resignOnTouchOutside = true
+            
+            return true
+        }
+        ```
+
+        Now tapping anywhere outside a text field will dismiss the keyboard.
+      </Tab>
+
+      <Tab title="All Features">
+        Enable all features with custom configuration:
+
+        ```swift AppDelegate.swift
+        import IQKeyboardManagerSwift
+        import IQKeyboardToolbarManager
+
+        func application(_ application: UIApplication,
+                         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+            
+            // Core functionality
+            IQKeyboardManager.shared.isEnabled = true
+            IQKeyboardManager.shared.keyboardDistance = 20.0
+            IQKeyboardManager.shared.layoutIfNeededOnUpdate = true
+            
+            // Toolbar (requires IQKeyboardToolbarManager package)
+            IQKeyboardToolbarManager.shared.isEnabled = true
+            
+            // Resign on touch
+            IQKeyboardManager.shared.resignOnTouchOutside = true
+            
+            // Appearance customization
+            IQKeyboardManager.shared.keyboardConfiguration.overrideAppearance = true
+            IQKeyboardManager.shared.keyboardConfiguration.appearance = .dark
+            
+            // Debugging (disable in production)
+            IQKeyboardManager.shared.isDebuggingEnabled = true
+            IQKeyboardToolbarManager.shared.isDebuggingEnabled = true
+            
+            return true
+        }
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Verify It Works">
+    Build and run your app:
+
+    1. Navigate to any screen with a UITextField or UITextView
+    2. Tap on the text field to bring up the keyboard
+    3. Notice how the view automatically adjusts to keep the text field visible
+
+    <Check>
+    **Success!** Your text fields should never be covered by the keyboard again.
+    </Check>
+
+    ### What to Look For
+
+    - The view automatically scrolls when a text field is focused
+    - Text fields near the bottom of the screen remain visible
+    - Works in all orientations (portrait and landscape)
+    - No code changes needed in your view controllers
+
+    ### Debug Mode (Optional)
+
+    If you enabled `isDebuggingEnabled`, check the console for helpful logs:
+
+    ```
+    IQKeyboardManager: Enabled
+    IQKeyboardManager: Keyboard will show
+    IQKeyboardManager: Adjusting position for MyViewController
+    IQKeyboardManager: Distance from keyboard: 20.0
+    ```
+  </Step>
+</Steps>
+
+## Per-View Configuration
+
+You can override global settings for specific text fields:
+
+<CodeGroup>
+```swift Custom Distance
+// Set custom keyboard distance for a specific text field
+myTextField.iq.distanceFromKeyboard = 50.0
+```
+
+```swift Disable for Specific View
+// Disable keyboard management for a specific view controller
+override func viewDidLoad() {
+    super.viewDidLoad()
+    
+    // Disable for this view controller only
+    self.view.iq.enableMode = .disabled
+}
+```
+</CodeGroup>
+
+## Thread Safety Note
+
+<Warning>
+All IQKeyboardManager APIs must be called from the **main thread**.
+</Warning>
+
+The library uses `@MainActor` to enforce this at compile time:
+
+```swift
+// ✅ Correct - called on main thread
+func application(_ application: UIApplication,
+                 didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    IQKeyboardManager.shared.isEnabled = true
+    return true
+}
+
+// ❌ Wrong - don't call from background thread
+DispatchQueue.global().async {
+    IQKeyboardManager.shared.isEnabled = true  // Compiler error
+}
+```
+
+## Common Configuration Options
+
+Here are the most commonly used configuration properties:
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `isEnabled` | `Bool` | `false` | Enable/disable keyboard management globally |
+| `keyboardDistance` | `CGFloat` | `10.0` | Distance between keyboard and text field |
+| `resignOnTouchOutside` | `Bool` | `false` | Dismiss keyboard when tapping outside |
+| `layoutIfNeededOnUpdate` | `Bool` | `false` | Force layout update on keyboard show |
+| `isDebuggingEnabled` | `Bool` | `false` | Enable console logging for debugging |
+
+<Tip>
+See the [Configuration Guide](/core/configuration) for a complete list of available options.
+</Tip>
+
+## What's Next?
+
+Now that you have IQKeyboardManager working, explore more advanced features:
+
+<CardGroup cols={2}>
+  <Card title="Core Configuration" icon="sliders" href="/core/configuration">
+    Learn about all available configuration options and customization
+  </Card>
+  <Card title="Toolbar Management" icon="toolbox" href="/guides/toolbar-management">
+    Customize the toolbar with Previous/Next/Done buttons
+  </Card>
+  <Card title="Advanced Configuration" icon="layer-group" href="/guides/advanced-configuration">
+    Override settings for specific views or view controllers
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/iqkeyboardmanager">
+    Explore the complete API documentation
+  </Card>
+</CardGroup>

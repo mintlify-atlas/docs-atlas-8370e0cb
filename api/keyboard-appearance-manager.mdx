@@ -1,0 +1,145 @@
+---
+title: "IQKeyboardAppearanceManager"
+description: "Internal manager that handles keyboard appearance application"
+---
+
+## Overview
+
+`IQKeyboardAppearanceManager` is an internal class responsible for monitoring text input view events and applying keyboard appearance settings based on the configuration provided by `IQKeyboardAppearanceConfiguration`. This class automatically observes when text fields and text views begin editing and applies the configured appearance.
+
+<Note>
+This is an internal class and is not meant to be instantiated or used directly. It is managed by `IQKeyboardManager`.
+</Note>
+
+## Class Declaration
+
+```swift
+@available(iOSApplicationExtension, unavailable)
+@MainActor
+@objcMembers internal final class IQKeyboardAppearanceManager: NSObject
+```
+
+## Properties
+
+<ParamField path="textInputViewObserver" type="IQTextInputViewNotification">
+  The observer that monitors text input view events (begin editing, end editing) throughout the application.
+
+  ```swift
+  let textInputViewObserver: IQTextInputViewNotification = .init()
+  ```
+</ParamField>
+
+<ParamField path="keyboardConfiguration" type="IQKeyboardAppearanceConfiguration">
+  The configuration object that contains the appearance settings to apply. This determines whether to override appearances and which appearance style to use.
+
+  ```swift
+  var keyboardConfiguration: IQKeyboardAppearanceConfiguration = .init()
+  ```
+</ParamField>
+
+## Internal Methods
+
+### addTextInputViewObserver()
+
+Registers an observer to monitor text input view events and apply keyboard appearance settings.
+
+```swift
+func addTextInputViewObserver()
+```
+
+**Implementation Details:**
+
+- Subscribes to text input view notifications with identifier "IQKeyboardAppearanceManager"
+- Monitors `.beginEditing` events
+- When a text field begins editing:
+  - Checks if `overrideAppearance` is enabled
+  - Verifies the current appearance differs from the configured appearance
+  - Applies the configured appearance
+  - Reloads the input views to reflect the change
+
+**Source:** IQKeyboardAppearanceManager+Internal.swift:34
+
+### removeTextInputViewObserver()
+
+Unsubscribes from text input view notifications and stops monitoring appearance changes.
+
+```swift
+func removeTextInputViewObserver()
+```
+
+**Implementation Details:**
+
+- Unsubscribes using the identifier "IQKeyboardAppearanceManager"
+- Called when the manager is being deactivated or deallocated
+
+**Source:** IQKeyboardAppearanceManager+Internal.swift:30
+
+## How It Works
+
+The appearance manager follows this workflow:
+
+1. **Initialization**: When created, it automatically calls `addTextInputViewObserver()` to start monitoring text input views
+2. **Event Monitoring**: Uses `IQTextInputViewNotification` to observe when any text field or text view begins editing
+3. **Appearance Check**: When `.beginEditing` event occurs:
+   - Checks if `keyboardConfiguration.overrideAppearance` is `true`
+   - Compares current text input view's `keyboardAppearance` with configured `appearance`
+4. **Appearance Application**: If override is enabled and appearances differ:
+   - Sets `textInputView.keyboardAppearance` to the configured value
+   - Calls `textInputView.reloadInputViews()` to apply the change
+5. **No Action on End Editing**: The `.endEditing` event is monitored but no action is taken
+
+## Code Example
+
+### Internal Implementation Flow
+
+```swift
+// This is how the manager applies appearance internally
+textInputViewObserver.subscribe(identifier: "IQKeyboardAppearanceManager",
+                                changeHandler: { [weak self] event, textInputView in
+    guard let self = self else { return }
+    switch event {
+    case .beginEditing:
+        guard self.keyboardConfiguration.overrideAppearance,
+              textInputView.keyboardAppearance != self.keyboardConfiguration.appearance else { 
+            return 
+        }
+        
+        textInputView.keyboardAppearance = self.keyboardConfiguration.appearance
+        textInputView.reloadInputViews()
+    case .endEditing:
+        break
+    }
+})
+```
+
+## Architecture Notes
+
+<Note>
+  The manager uses a weak reference to self in the change handler to prevent retain cycles and ensure proper memory management.
+</Note>
+
+<Note>
+  The appearance is only applied during `.beginEditing` events. This ensures the keyboard appearance is updated before it becomes visible to the user.
+</Note>
+
+<Note>
+  The manager checks if the appearance is already correct before applying changes, avoiding unnecessary `reloadInputViews()` calls which can cause visual glitches.
+</Note>
+
+## Thread Safety
+
+<Note>
+  This class is marked with `@MainActor`, ensuring all operations occur on the main thread. This is critical since it interacts with UIKit components.
+</Note>
+
+## Availability
+
+<Note>
+  This class is unavailable in iOS App Extensions due to its dependency on UIApplication features and the notification system.
+</Note>
+
+## See Also
+
+- [IQKeyboardAppearanceConfiguration](/api/keyboard-appearance-configuration) - The configuration object this manager uses
+- [IQKeyboardManager](/api/iqkeyboardmanager) - The main keyboard manager that owns this component
+- [IQTextInputViewNotification](https://github.com/hackiftekhar/IQTextInputViewNotification) - The notification system used for monitoring

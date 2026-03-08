@@ -1,0 +1,153 @@
+---
+title: Basic Setup
+description: Step-by-step guide to set up IQKeyboardManager in your iOS project
+---
+
+## Overview
+
+IQKeyboardManager is a code-less drop-in library that automatically prevents the keyboard from covering UITextField/UITextView. This guide will walk you through the basic setup process.
+
+## Installation
+
+First, install IQKeyboardManager using your preferred package manager:
+
+<CodeGroup>
+```ruby CocoaPods
+pod 'IQKeyboardManagerSwift'
+```
+
+```swift Swift Package Manager
+// In Xcode:
+// File -> Swift Packages -> Add Package Dependency
+// https://github.com/hackiftekhar/IQKeyboardManager.git
+```
+
+```ruby Carthage
+github "hackiftekhar/IQKeyboardManager"
+```
+</CodeGroup>
+
+## Basic Configuration
+
+<Steps>
+  <Step title="Import the library">
+    Add the import statement to your AppDelegate:
+    
+    ```swift AppDelegate.swift
+    import IQKeyboardManagerSwift
+    ```
+  </Step>
+
+  <Step title="Enable IQKeyboardManager">
+    Enable the manager in `application(_:didFinishLaunchingWithOptions:)`:
+    
+    ```swift AppDelegate.swift
+    @main
+    class AppDelegate: UIResponder, UIApplicationDelegate {
+        
+        func application(_ application: UIApplication,
+                         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+            
+            // Enable keyboard management
+            IQKeyboardManager.shared.isEnabled = true
+            
+            return true
+        }
+    }
+    ```
+    
+    <Note>
+      That's it! With just one line of code, IQKeyboardManager will automatically handle keyboard avoidance for all text fields in your app.
+    </Note>
+  </Step>
+
+  <Step title="Test the keyboard behavior">
+    Run your app and tap on any text field. The view should automatically adjust to prevent the keyboard from covering the active text field.
+    
+    <Tip>
+      IQKeyboardManager works automatically with UITextField, UITextView, UIScrollView, UITableView, and UICollectionView without any additional configuration.
+    </Tip>
+  </Step>
+</Steps>
+
+## Optional Configuration
+
+You can customize the default keyboard distance:
+
+```swift AppDelegate.swift
+func application(_ application: UIApplication,
+                 didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    
+    IQKeyboardManager.shared.isEnabled = true
+    
+    // Set custom distance between keyboard and text field (default is 10.0)
+    IQKeyboardManager.shared.keyboardDistance = 20.0
+    
+    return true
+}
+```
+
+## SwiftUI Apps
+
+For SwiftUI apps using `@main`, configure IQKeyboardManager in your App struct:
+
+```swift App.swift
+import SwiftUI
+import IQKeyboardManagerSwift
+
+@main
+struct MyApp: App {
+    
+    init() {
+        // Enable keyboard management
+        IQKeyboardManager.shared.isEnabled = true
+    }
+    
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
+    }
+}
+```
+
+## What Happens Behind the Scenes
+
+When enabled, IQKeyboardManager:
+
+1. Observes keyboard show/hide notifications
+2. Detects the active text input view
+3. Calculates the required adjustment to prevent keyboard overlap
+4. Smoothly animates the view to the correct position
+5. Restores the original position when the keyboard is dismissed
+
+## Verification
+
+To verify IQKeyboardManager is working correctly:
+
+1. Create a form with multiple text fields
+2. Tap on a text field at the bottom of the screen
+3. The view should automatically scroll up to show the text field above the keyboard
+4. Tap outside the text field or press the return key
+5. The view should smoothly return to its original position
+
+<Note>
+  IQKeyboardManager is thread-safe and all APIs must be called from the main thread. The class is marked with `@MainActor` to enforce this at compile time.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Advanced Configuration" icon="sliders" href="/guides/advanced-configuration">
+    Learn about class-level controls and view-specific overrides
+  </Card>
+  <Card title="Toolbar Management" icon="wrench" href="/guides/toolbar-management">
+    Add Previous/Next/Done buttons to the keyboard
+  </Card>
+  <Card title="Debugging" icon="bug" href="/guides/debugging">
+    Enable debug logging to troubleshoot issues
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/iqkeyboardmanager">
+    Explore all available properties and methods
+  </Card>
+</CardGroup>

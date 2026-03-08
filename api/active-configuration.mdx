@@ -1,0 +1,232 @@
+---
+title: 'IQActiveConfiguration'
+description: 'Internal class that tracks active keyboard and text input view state'
+icon: 'circle-nodes'
+---
+
+## Overview
+
+`IQActiveConfiguration` is an internal class that coordinates keyboard state and active text input view information. It serves as the central coordination point between keyboard events, text input events, and the position adjustment logic in `IQKeyboardManager`.
+
+<Warning>
+  This is an internal class and is not part of the public API. The documentation is provided for understanding the library's architecture.
+</Warning>
+
+## Purpose
+
+The active configuration class:
+- Monitors keyboard appearance, dismissal, and frame changes via `IQKeyboardNotification`
+- Tracks which text input view is currently active via `IQTextInputViewNotification`
+- Maintains the root view controller configuration state
+- Coordinates animation timing between keyboard and view adjustments
+- Manages the event lifecycle (show, change, hide)
+
+## Properties
+
+### keyboardInfo
+
+```swift
+var keyboardInfo: IQKeyboardInfo { get }
+```
+
+Provides information about the current keyboard state including:
+- Keyboard visibility status (`isVisible`)
+- Keyboard frame and bounds
+- Animation duration and curve
+
+<ResponseField name="keyboardInfo" type="IQKeyboardInfo">
+  Read-only property that returns the current keyboard information from the internal keyboard observer.
+</ResponseField>
+
+### textInputView
+
+```swift
+var textInputView: (any IQTextInputView)? { get }
+```
+
+Returns the currently active text input view (UITextField or UITextView), excluding alert view text fields.
+
+<ResponseField name="textInputView" type="(any IQTextInputView)?">
+  The text input view that currently has focus, or `nil` if no text input is active or if the active text input is within an alert view.
+</ResponseField>
+
+### textInputViewInfo
+
+```swift
+var textInputViewInfo: IQTextInputViewInfo? { get }
+```
+
+Provides detailed information about the active text input view, including its position, hierarchy, and parent view controller.
+
+<ResponseField name="textInputViewInfo" type="IQTextInputViewInfo?">
+  Comprehensive information about the active text input view, or `nil` if no text input is active.
+</ResponseField>
+
+### rootConfiguration
+
+```swift
+var rootConfiguration: IQRootControllerConfiguration? { get set }
+```
+
+Maintains the current root view controller configuration, which tracks the view controller's origin, safe area insets, and orientation.
+
+<ResponseField name="rootConfiguration" type="IQRootControllerConfiguration?">
+  Configuration object for the root view controller containing the active text input. Set automatically when a text input becomes active.
+</ResponseField>
+
+### isReady
+
+```swift
+var isReady: Bool { get }
+```
+
+Indicates whether the configuration is ready for position adjustments.
+
+<ResponseField name="isReady" type="Bool">
+  Returns `true` when both a text input view is active and the root configuration is ready (view controller's view is in a window).
+</ResponseField>
+
+## Event Lifecycle
+
+The active configuration manages three types of events:
+
+<Expandable title="Event.show">
+  Triggered when the keyboard appears while a text input is active. This is the initial event when transitioning from a hidden keyboard state.
+  
+  **When it fires:**
+  - Keyboard becomes visible
+  - A text input has focus
+  - Root configuration is ready
+</Expandable>
+
+<Expandable title="Event.change">
+  Triggered when the keyboard or text input changes while the keyboard is already visible.
+  
+  **When it fires:**
+  - Keyboard frame changes (e.g., switching keyboard types)
+  - Different text input becomes active
+  - Device orientation changes
+  - Interactive pop gesture is cancelled
+</Expandable>
+
+<Expandable title="Event.hide">
+  Triggered when the keyboard is dismissed and all adjustments should be reverted.
+  
+  **When it fires:**
+  - Keyboard becomes hidden
+  - Text input resigns first responder
+  - Interactive pop gesture completes successfully
+</Expandable>
+
+## Animation Coordination
+
+### animate(alongsideTransition:completion:)
+
+Coordinates custom animations with the keyboard's animation timing.
+
+```swift
+public func animate(
+    alongsideTransition transition: @escaping () -> Void,
+    completion: (() -> Void)? = nil
+)
+```
+
+**Parameters:**
+- `transition`: The animation block to execute alongside the keyboard animation
+- `completion`: Optional completion handler called after the animation finishes
+
+This method ensures that custom view adjustments animate with the same duration and curve as the keyboard animation, providing a seamless user experience.
+
+## Observer Pattern
+
+### subscribe(identifier:changeHandler:)
+
+Registers a change handler to be notified of configuration events.
+
+```swift
+func subscribe(
+    identifier: AnyHashable,
+    changeHandler: @escaping ConfigurationCompletion
+)
+```
+
+**Parameters:**
+- `identifier`: Unique identifier for the observer (used for unsubscribing)
+- `changeHandler`: Closure called when events occur
+
+**Closure Signature:**
+```swift
+typealias ConfigurationCompletion = (
+    _ event: Event,
+    _ keyboardInfo: IQKeyboardInfo,
+    _ textInputViewInfo: IQTextInputViewInfo?
+) -> Void
+```
+
+### unsubscribe(identifier:)
+
+Removes a previously registered observer.
+
+```swift
+func unsubscribe(identifier: AnyHashable)
+```
+
+## Interactive Gesture Handling
+
+The configuration includes special handling for interactive navigation gestures (swipe to go back). When an interactive pop gesture is detected:
+
+1. Monitors the root controller's frame changes
+2. Preserves keyboard and text input state during the gesture
+3. If the gesture is cancelled, restores the configuration
+4. If the gesture completes, properly cleans up the configuration
+
+This prevents visual glitches during interactive navigation transitions.
+
+## Orientation Change Handling
+
+When the device orientation changes:
+
+1. The configuration checks if the orientation has changed since initialization
+2. Updates the root controller configuration if needed
+3. Triggers appropriate events for position recalculation
+4. Restores previous state if the orientation returns to the original
+
+## Internal Architecture
+
+```swift
+private let keyboardObserver: IQKeyboardNotification
+private let textInputViewObserver: IQTextInputViewNotification
+private var changeObservers: [AnyHashable: ConfigurationCompletion]
+var cancellable: Set<AnyCancellable>
+```
+
+The class uses Combine publishers to observe frame changes and coordinate complex gesture interactions.
+
+## Thread Safety
+
+<Info>
+  The entire class is marked with `@MainActor`, ensuring all operations occur on the main thread. This is critical for UI updates and view hierarchy queries.
+</Info>
+
+## Usage in IQKeyboardManager
+
+The `IQKeyboardManager` class maintains an internal instance:
+
+```swift
+internal var activeConfiguration: IQActiveConfiguration = .init()
+```
+
+This instance is subscribed to by the keyboard manager to receive events and trigger position adjustments:
+
+```swift
+activeConfiguration.subscribe(identifier: "IQKeyboardManager") { event, keyboardInfo, textInputViewInfo in
+    // Trigger adjustPosition() or restorePosition() based on event
+}
+```
+
+## See Also
+
+- [IQKeyboardManager](/api/iqkeyboardmanager) - Main keyboard manager class
+- [IQRootControllerConfiguration](/api/root-controller-configuration) - Root controller state tracking
+- [IQKeyboardNotification](https://github.com/hackiftekhar/IQKeyboardNotification) - Keyboard event observation
+- [IQTextInputViewNotification](https://github.com/hackiftekhar/IQKeyboardNotification) - Text input event observation

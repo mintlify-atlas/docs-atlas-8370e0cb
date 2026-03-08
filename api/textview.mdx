@@ -1,0 +1,421 @@
+---
+title: "IQTextView"
+description: "Independent package providing UITextView with placeholder support"
+icon: "text"
+---
+
+## Overview
+
+As of version 8.0, **IQTextView** is now an independent package, separated from the main IQKeyboardManager library. It provides a drop-in replacement for UITextView with built-in placeholder support, similar to UITextField.
+
+<Info>
+  IQTextView was previously part of IQKeyboardManager but has been extracted into its own package for better modularity.
+</Info>
+
+## GitHub Repository
+
+[hackiftekhar/IQTextView](https://github.com/hackiftekhar/IQTextView)
+
+## Key Features
+
+- **Placeholder Support** - Native placeholder text like UITextField
+- **Customizable Appearance** - Control placeholder color, font, and alignment
+- **Drop-in Replacement** - Use exactly like UITextView
+- **Auto-resizing** - Works with Auto Layout and manual frames
+- **UITextViewDelegate Compatible** - Fully compatible with standard delegates
+- **IBDesignable** - Configure placeholder in Interface Builder
+
+## Installation
+
+### CocoaPods
+
+```ruby
+# Install IQTextView independently
+pod 'IQTextView'
+
+# Or as a subspec of IQKeyboardManager for easier migration
+pod 'IQKeyboardManagerSwift/IQTextView'
+```
+
+### Swift Package Manager
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/hackiftekhar/IQTextView.git", from: "2.0.0")
+]
+```
+
+### Carthage
+
+```ogdl
+github "hackiftekhar/IQTextView"
+```
+
+## Basic Usage
+
+### Programmatic Setup
+
+```swift
+import IQTextView
+
+class MyViewController: UIViewController {
+    
+    private let textView: IQTextView = {
+        let tv = IQTextView()
+        tv.placeholder = "Enter your message here..."
+        tv.placeholderTextColor = .lightGray
+        tv.font = .systemFont(ofSize: 16)
+        return tv
+    }()
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        view.addSubview(textView)
+        // Add constraints...
+    }
+}
+```
+
+### Interface Builder
+
+1. Add a `UITextView` to your storyboard or XIB
+2. Set the class to `IQTextView` in Identity Inspector
+3. Configure the placeholder in Attributes Inspector
+
+```swift
+class FormViewController: UIViewController {
+    
+    @IBOutlet var commentTextView: IQTextView!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Placeholder is already set in Interface Builder
+        commentTextView.placeholderTextColor = .systemGray3
+    }
+}
+```
+
+## Customization
+
+### Placeholder Appearance
+
+```swift
+let textView = IQTextView()
+
+// Set placeholder text
+textView.placeholder = "Type something..."
+
+// Customize placeholder color
+textView.placeholderTextColor = .systemGray
+
+// Use attributed placeholder for advanced styling
+let attributes: [NSAttributedString.Key: Any] = [
+    .font: UIFont.italicSystemFont(ofSize: 14),
+    .foregroundColor: UIColor.systemGray2
+]
+textView.attributedPlaceholder = NSAttributedString(
+    string: "Enter description...",
+    attributes: attributes
+)
+```
+
+### Placeholder Label Access
+
+For advanced customization, access the internal placeholder label:
+
+```swift
+// Access the placeholder label directly
+if let placeholderLabel = textView.placeholderLabel {
+    placeholderLabel.numberOfLines = 0
+    placeholderLabel.textAlignment = .center
+}
+```
+
+## Integration with IQKeyboardManager
+
+IQTextView works seamlessly with IQKeyboardManager:
+
+```swift
+// In AppDelegate
+import IQKeyboardManagerSwift
+
+func application(_ application: UIApplication,
+                 didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    
+    IQKeyboardManager.shared.isEnabled = true
+    return true
+}
+
+// In ViewController
+import IQTextView
+
+class NoteViewController: UIViewController {
+    
+    private let textView: IQTextView = {
+        let tv = IQTextView()
+        tv.placeholder = "Write your note..."
+        return tv
+    }()
+    
+    // IQKeyboardManager will automatically handle keyboard avoidance
+}
+```
+
+## Properties
+
+### Core Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `placeholder` | `String?` | Plain text placeholder |
+| `attributedPlaceholder` | `NSAttributedString?` | Styled placeholder text |
+| `placeholderTextColor` | `UIColor` | Color of placeholder text |
+| `placeholderLabel` | `UILabel?` | Direct access to placeholder label |
+
+### Inherited from UITextView
+
+All standard UITextView properties are available:
+
+```swift
+textView.text = "Initial text"
+textView.font = .systemFont(ofSize: 16)
+textView.textColor = .label
+textView.textAlignment = .left
+textView.isEditable = true
+textView.delegate = self
+```
+
+## Examples
+
+### Multi-line Form Field
+
+```swift
+import IQTextView
+
+class FeedbackViewController: UIViewController {
+    
+    private let feedbackTextView: IQTextView = {
+        let tv = IQTextView()
+        tv.placeholder = "Please share your feedback with us. We'd love to hear your thoughts!"
+        tv.placeholderTextColor = .systemGray3
+        tv.font = .systemFont(ofSize: 16)
+        tv.layer.borderWidth = 1
+        tv.layer.borderColor = UIColor.systemGray4.cgColor
+        tv.layer.cornerRadius = 8
+        tv.textContainerInset = UIEdgeInsets(top: 12, left: 8, bottom: 12, right: 8)
+        return tv
+    }()
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupUI()
+    }
+}
+```
+
+### Comment Section
+
+```swift
+import IQTextView
+
+class CommentViewController: UIViewController, UITextViewDelegate {
+    
+    @IBOutlet var commentTextView: IQTextView!
+    @IBOutlet var submitButton: UIButton!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        commentTextView.placeholder = "Add a comment..."
+        commentTextView.placeholderTextColor = .secondaryLabel
+        commentTextView.delegate = self
+        
+        updateSubmitButton()
+    }
+    
+    func textViewDidChange(_ textView: UITextView) {
+        updateSubmitButton()
+    }
+    
+    private func updateSubmitButton() {
+        // Enable submit only when there's text
+        submitButton.isEnabled = !commentTextView.text.isEmpty
+    }
+}
+```
+
+### Dynamic Height Text View
+
+```swift
+import IQTextView
+
+class MessageViewController: UIViewController {
+    
+    private let messageTextView: IQTextView = {
+        let tv = IQTextView()
+        tv.placeholder = "Type a message..."
+        tv.font = .systemFont(ofSize: 15)
+        tv.isScrollEnabled = false // Allow dynamic height
+        tv.translatesAutoresizingMaskIntoConstraints = false
+        return tv
+    }()
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        view.addSubview(messageTextView)
+        
+        NSLayoutConstraint.activate([
+            messageTextView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            messageTextView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            messageTextView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
+            // Height will adjust automatically based on content
+        ])
+    }
+}
+```
+
+### Attributed Placeholder
+
+```swift
+import IQTextView
+
+class BioViewController: UIViewController {
+    
+    private let bioTextView: IQTextView = {
+        let tv = IQTextView()
+        
+        // Create styled placeholder
+        let placeholder = NSMutableAttributedString()
+        
+        // Title part
+        let titleAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.boldSystemFont(ofSize: 16),
+            .foregroundColor: UIColor.systemGray
+        ]
+        placeholder.append(NSAttributedString(string: "About You\n", attributes: titleAttributes))
+        
+        // Description part
+        let descAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 14),
+            .foregroundColor: UIColor.systemGray3
+        ]
+        placeholder.append(NSAttributedString(string: "Share a brief bio about yourself...", attributes: descAttributes))
+        
+        tv.attributedPlaceholder = placeholder
+        return tv
+    }()
+}
+```
+
+## Migration from v7
+
+<Info>
+  See the [Migration Guide](/migration/overview) for detailed migration instructions from IQKeyboardManager v7 to v8.
+</Info>
+
+### Key Changes
+
+1. **Separate Package** - IQTextView is now an independent library
+2. **Import Statement** - Import `IQTextView` instead of `IQKeyboardManagerSwift`
+3. **No API Changes** - The IQTextView API remains the same
+
+### Before (v7)
+
+```swift
+import IQKeyboardManagerSwift
+
+let textView = IQTextView()
+textView.placeholder = "Enter text..."
+```
+
+### After (v8)
+
+```swift
+import IQTextView
+
+let textView = IQTextView()
+textView.placeholder = "Enter text..." // Same API
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Appropriate Placeholder Length">
+    Keep placeholders concise and descriptive:
+    
+    ```swift
+    // ✅ Good - clear and concise
+    textView.placeholder = "Enter your message"
+    
+    // ❌ Too long
+    textView.placeholder = "Please enter your message here and make sure to include all relevant details"
+    ```
+  </Accordion>
+  
+  <Accordion title="Match Placeholder Style to Content">
+    Ensure placeholder styling matches your text styling:
+    
+    ```swift
+    textView.font = .systemFont(ofSize: 16)
+    textView.placeholder = "Message"
+    // Placeholder will use the same font automatically
+    ```
+  </Accordion>
+  
+  <Accordion title="Accessibility Considerations">
+    Placeholders alone may not be sufficient for accessibility:
+    
+    ```swift
+    textView.placeholder = "Email address"
+    textView.accessibilityLabel = "Email address input field"
+    textView.accessibilityHint = "Enter your email address"
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+### Placeholder Not Showing
+
+If the placeholder isn't visible:
+
+```swift
+// Ensure text is empty
+textView.text = ""
+
+// Verify placeholder is set
+print(textView.placeholder ?? "No placeholder set")
+
+// Check placeholder color isn't too light
+textView.placeholderTextColor = .red // Test with visible color
+```
+
+### Placeholder Color Too Light
+
+```swift
+// Use semantic colors for better visibility
+textView.placeholderTextColor = .secondaryLabel // Adapts to light/dark mode
+
+// Or use custom color with appropriate contrast
+textView.placeholderTextColor = UIColor(red: 0.6, green: 0.6, blue: 0.6, alpha: 1.0)
+```
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="IQKeyboardToolbarManager" icon="wrench" href="/api/toolbar-manager">
+    Add toolbar with Previous/Next/Done buttons
+  </Card>
+  <Card title="IQKeyboardReturnManager" icon="arrow-turn-down-left" href="/api/return-manager">
+    Handle return key navigation
+  </Card>
+</CardGroup>
+
+## See Also
+
+- [Getting Started](/introduction)
+- [Configuration Guide](/core/configuration)
+- [GitHub Repository](https://github.com/hackiftekhar/IQTextView)

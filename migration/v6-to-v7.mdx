@@ -1,0 +1,484 @@
+---
+title: Migration Guide v6 to v7
+description: Upgrade from IQKeyboardManager v6 to v7 with improved configuration API
+---
+
+## Overview
+
+Version 7.0 introduces a cleaner, more organized API structure with configuration objects and the `.iq` wrapper pattern for UIView extensions. This improves code clarity and reduces namespace pollution.
+
+<Info>
+  **Key Change**: Most UIView extension properties now use the `.iq` namespace wrapper pattern.
+</Info>
+
+## Breaking Changes
+
+### Removed Features
+
+The following properties and methods have been removed:
+
+```swift
+// Removed in v7
+IQKeyboardManager.shared.preventShowingBottomBlankSpace // [!code --]
+IQKeyboardManager.shared.shouldFixInteractivePopGestureRecognizer // [!code --]
+IQKeyboardManager.shared.canAdjustAdditionalSafeAreaInsets // [!code --]
+
+// Removed registration methods
+IQKeyboardManager.shared.registerTextFieldViewClass(_:didBeginEditingNotificationName:didEndEditingNotificationName:) // [!code --]
+IQKeyboardManager.shared.unregisterTextFieldViewClass(_:didBeginEditingNotificationName:didEndEditingNotificationName:) // [!code --]
+```
+
+### Removed UIViewController Property
+
+```swift
+// Removed IBOutlet
+@IBOutlet var IQLayoutGuideConstraint: NSLayoutConstraint? // [!code --]
+```
+
+## IQKeyboardManager Configuration Changes
+
+### Property Renaming
+
+Many properties have been renamed for consistency:
+
+<CodeGroup>
+```swift v6 Properties
+IQKeyboardManager.shared.shouldResignOnTouchOutside
+IQKeyboardManager.shared.shouldPlayInputClicks
+IQKeyboardManager.shared.toolbarManageBehaviour
+IQKeyboardManager.shared.shouldToolbarUsesTextFieldTintColor
+IQKeyboardManager.shared.overrideKeyboardAppearance
+IQKeyboardManager.shared.keyboardAppearance
+```
+
+```swift v7 Properties
+IQKeyboardManager.shared.resignOnTouchOutside // [!code ++]
+IQKeyboardManager.shared.playInputClicks // [!code ++]
+// Moved to configuration object ↓
+toolbarConfiguration.manageBehavior // [!code ++]
+toolbarConfiguration.useTextFieldTintColor // [!code ++]
+// Moved to keyboard configuration ↓
+keyboardConfiguration.overrideAppearance // [!code ++]
+keyboardConfiguration.appearance // [!code ++]
+```
+</CodeGroup>
+
+### Toolbar Configuration
+
+Toolbar-related properties are now consolidated into `IQToolbarConfiguration`:
+
+<CodeGroup>
+```swift v6 Toolbar Properties
+IQKeyboardManager.shared.toolbarManageBehaviour
+IQKeyboardManager.shared.shouldToolbarUsesTextFieldTintColor
+IQKeyboardManager.shared.toolbarTintColor
+IQKeyboardManager.shared.toolbarBarTintColor
+IQKeyboardManager.shared.previousNextDisplayMode
+
+IQKeyboardManager.shared.toolbarPreviousBarButtonItemImage
+IQKeyboardManager.shared.toolbarPreviousBarButtonItemText
+IQKeyboardManager.shared.toolbarPreviousBarButtonItemAccessibilityLabel
+
+IQKeyboardManager.shared.toolbarNextBarButtonItemImage
+IQKeyboardManager.shared.toolbarNextBarButtonItemText
+IQKeyboardManager.shared.toolbarNextBarButtonItemAccessibilityLabel
+
+IQKeyboardManager.shared.toolbarDoneBarButtonItemImage
+IQKeyboardManager.shared.toolbarDoneBarButtonItemText
+IQKeyboardManager.shared.toolbarDoneBarButtonItemAccessibilityLabel
+```
+
+```swift v7 Toolbar Configuration
+let manager = IQKeyboardManager.shared
+
+// General toolbar settings
+manager.toolbarConfiguration.manageBehavior
+manager.toolbarConfiguration.useTextFieldTintColor
+manager.toolbarConfiguration.tintColor
+manager.toolbarConfiguration.barTintColor
+manager.toolbarConfiguration.previousNextDisplayMode
+
+// Previous button configuration
+manager.toolbarConfiguration.previousBarButtonConfiguration?.image
+manager.toolbarConfiguration.previousBarButtonConfiguration?.title
+manager.toolbarConfiguration.previousBarButtonConfiguration?.accessibilityLabel
+
+// Next button configuration
+manager.toolbarConfiguration.nextBarButtonConfiguration?.image
+manager.toolbarConfiguration.nextBarButtonConfiguration?.title
+manager.toolbarConfiguration.nextBarButtonConfiguration?.accessibilityLabel
+
+// Done button configuration
+manager.toolbarConfiguration.doneBarButtonConfiguration?.image
+manager.toolbarConfiguration.doneBarButtonConfiguration?.title
+manager.toolbarConfiguration.doneBarButtonConfiguration?.accessibilityLabel
+```
+</CodeGroup>
+
+### Placeholder Configuration
+
+Placeholder-related properties moved to `IQToolbarPlaceholderConfiguration`:
+
+<CodeGroup>
+```swift v6 Placeholder Properties
+IQKeyboardManager.shared.toolbarTitlBarButtonItemAccessibilityLabel
+IQKeyboardManager.shared.shouldShowToolbarPlaceholder
+IQKeyboardManager.shared.placeholderFont
+IQKeyboardManager.shared.placeholderColor
+IQKeyboardManager.shared.placeholderButtonColor
+```
+
+```swift v7 Placeholder Configuration
+let config = IQKeyboardManager.shared.toolbarConfiguration.placeholderConfiguration
+
+config.accessibilityLabel
+config.showPlaceholder
+config.font
+config.color
+config.buttonColor
+```
+</CodeGroup>
+
+### Keyboard Appearance Configuration
+
+Keyboard appearance settings moved to `IQKeyboardConfiguration`:
+
+<CodeGroup>
+```swift v6 Keyboard Appearance
+IQKeyboardManager.shared.overrideKeyboardAppearance
+IQKeyboardManager.shared.keyboardAppearance
+```
+
+```swift v7 Keyboard Configuration
+let config = IQKeyboardManager.shared.keyboardConfiguration
+
+config.overrideAppearance
+config.appearance
+```
+</CodeGroup>
+
+## Keyboard Listener Changes
+
+Keyboard state monitoring has been moved to a dedicated `IQKeyboardListener` class:
+
+<CodeGroup>
+```swift v6 Keyboard Monitoring
+IQKeyboardManager.shared.registerKeyboardSizeChange(identifier: "myId") { size in
+    print("Keyboard size: \(size)")
+}
+IQKeyboardManager.shared.unregisterKeyboardSizeChange(identifier: "myId")
+
+let isShowing = IQKeyboardManager.shared.keyboardShowing
+let frame = IQKeyboardManager.shared.keyboardFrame
+```
+
+```swift v7 Keyboard Listener
+let listener = IQKeyboardListener()
+
+listener.registerSizeChange(identifier: "myId") { size in
+    print("Keyboard size: \(size)")
+}
+listener.unregisterSizeChange(identifier: "myId")
+
+let isShowing = listener.keyboardShowing
+let frame = listener.frame
+```
+</CodeGroup>
+
+## UIScrollView Extension Changes
+
+ScrollView extensions now use the `.iq` wrapper pattern:
+
+<CodeGroup>
+```swift v6 ScrollView Extensions
+scrollView.shouldIgnoreScrollingAdjustment = true
+scrollView.shouldIgnoreContentInsetAdjustment = true
+scrollView.shouldRestoreScrollViewContentOffset = true
+```
+
+```swift v7 ScrollView Extensions
+scrollView.iq.ignoreScrollingAdjustment = true
+scrollView.iq.ignoreContentInsetAdjustment = true
+scrollView.iq.restoreContentOffset = true
+```
+</CodeGroup>
+
+## UIView Extension Changes
+
+### Configuration Properties
+
+<CodeGroup>
+```swift v6 UIView Properties
+textField.keyboardDistanceFromTextField = 10
+textField.ignoreSwitchingByNextPrevious = true
+textField.enableMode = .enabled
+textField.shouldResignOnTouchOutsideMode = .enabled
+```
+
+```swift v7 UIView Properties
+textField.iq.distanceFromKeyboard = 10
+textField.iq.ignoreSwitchingByNextPrevious = true
+textField.iq.enableMode = .enabled
+textField.iq.resignOnTouchOutsideMode = .enabled
+```
+</CodeGroup>
+
+### View Hierarchy Methods
+
+<CodeGroup>
+```swift v6 View Hierarchy
+let controller = view.viewContainingController()
+let topController = view.topMostController()
+let container = view.parentContainerViewController()
+let superview = view.superviewOfClassType(UIScrollView.self)
+```
+
+```swift v7 View Hierarchy
+let controller = view.iq.viewContainingController()
+let topController = view.iq.topMostController()
+let container = view.iq.parentContainerViewController()
+let superview = view.iq.superviewOf(type: UIScrollView.self)
+```
+</CodeGroup>
+
+### Toolbar Properties
+
+<CodeGroup>
+```swift v6 Toolbar Properties
+textField.keyboardToolbar
+textField.shouldHideToolbarPlaceholder = true
+textField.toolbarPlaceholder = "Enter name"
+textField.drawingToolbarPlaceholder
+textField.addKeyboardToolbarWithTarget(target: self, 
+                                       titleText: "Name",
+                                       rightBarButtonConfiguration: doneConfig)
+```
+
+```swift v7 Toolbar Properties
+textField.iq.toolbar
+textField.iq.hidePlaceholder = true
+textField.iq.placeholder = "Enter name"
+textField.iq.drawingPlaceholder
+textField.iq.addToolbar(target: self,
+                        title: "Name",
+                        rightConfiguration: doneConfig)
+```
+</CodeGroup>
+
+## UIViewController Extension Changes
+
+<CodeGroup>
+```swift v6 ViewController Method
+open func parentIQContainerViewController() -> UIViewController?
+```
+
+```swift v7 ViewController Method
+open func iq_parentContainerViewController() -> UIViewController?
+```
+</CodeGroup>
+
+## Migration Steps
+
+<Steps>
+  <Step title="Update Dependency">
+    Update your `Podfile` or `Package.swift` to version 7.0+
+    
+    ```ruby
+    # CocoaPods
+    pod 'IQKeyboardManagerSwift', '~> 7.0'
+    ```
+    
+    ```swift
+    // Swift Package Manager
+    .package(url: "https://github.com/hackiftekhar/IQKeyboardManager.git", from: "7.0.0")
+    ```
+  </Step>
+  
+  <Step title="Install Dependencies">
+    ```bash
+    # CocoaPods
+    pod install
+    
+    # Swift Package Manager
+    # File > Packages > Update to Latest Package Versions
+    ```
+  </Step>
+  
+  <Step title="Update Property Names">
+    Use find-and-replace to update renamed properties:
+    
+    - `shouldResignOnTouchOutside` → `resignOnTouchOutside`
+    - `shouldPlayInputClicks` → `playInputClicks`
+    - `overrideKeyboardAppearance` → `keyboardConfiguration.overrideAppearance`
+    - `keyboardAppearance` → `keyboardConfiguration.appearance`
+  </Step>
+  
+  <Step title="Migrate Toolbar Configuration">
+    Move toolbar settings to configuration objects:
+    
+    ```swift
+    // Before
+    IQKeyboardManager.shared.toolbarTintColor = .blue
+    IQKeyboardManager.shared.shouldShowToolbarPlaceholder = true
+    
+    // After
+    IQKeyboardManager.shared.toolbarConfiguration.tintColor = .blue
+    IQKeyboardManager.shared.toolbarConfiguration.placeholderConfiguration.showPlaceholder = true
+    ```
+  </Step>
+  
+  <Step title="Update UIView Extensions">
+    Add `.iq` wrapper to all UIView extension properties:
+    
+    ```swift
+    // Before
+    textField.keyboardDistanceFromTextField = 10
+    scrollView.shouldIgnoreScrollingAdjustment = true
+    
+    // After
+    textField.iq.distanceFromKeyboard = 10
+    scrollView.iq.ignoreScrollingAdjustment = true
+    ```
+  </Step>
+  
+  <Step title="Update Keyboard Monitoring">
+    If you use keyboard size monitoring, migrate to `IQKeyboardListener`:
+    
+    ```swift
+    // Before
+    IQKeyboardManager.shared.registerKeyboardSizeChange(identifier: "id") { size in }
+    
+    // After
+    let listener = IQKeyboardListener()
+    listener.registerSizeChange(identifier: "id") { size in }
+    ```
+  </Step>
+  
+  <Step title="Build and Test">
+    - Build your project and fix compilation errors
+    - Test all keyboard interactions
+    - Verify toolbar customizations still work
+  </Step>
+</Steps>
+
+## Complete Example
+
+Here's a before/after comparison of typical AppDelegate configuration:
+
+<CodeGroup>
+```swift v6 Configuration
+import IQKeyboardManagerSwift
+
+func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    IQKeyboardManager.shared.enable = true
+    
+    // Touch outside to dismiss
+    IQKeyboardManager.shared.shouldResignOnTouchOutside = true
+    
+    // Toolbar configuration
+    IQKeyboardManager.shared.enableAutoToolbar = true
+    IQKeyboardManager.shared.toolbarTintColor = .systemBlue
+    IQKeyboardManager.shared.shouldShowToolbarPlaceholder = true
+    IQKeyboardManager.shared.placeholderFont = .systemFont(ofSize: 14)
+    IQKeyboardManager.shared.toolbarDoneBarButtonItemText = "Done"
+    
+    // Keyboard appearance
+    IQKeyboardManager.shared.overrideKeyboardAppearance = true
+    IQKeyboardManager.shared.keyboardAppearance = .dark
+    
+    return true
+}
+```
+
+```swift v7 Configuration
+import IQKeyboardManagerSwift
+
+func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    let manager = IQKeyboardManager.shared
+    manager.enable = true
+    
+    // Touch outside to dismiss
+    manager.resignOnTouchOutside = true
+    
+    // Toolbar configuration
+    manager.enableAutoToolbar = true
+    manager.toolbarConfiguration.tintColor = .systemBlue
+    manager.toolbarConfiguration.placeholderConfiguration.showPlaceholder = true
+    manager.toolbarConfiguration.placeholderConfiguration.font = .systemFont(ofSize: 14)
+    manager.toolbarConfiguration.doneBarButtonConfiguration?.title = "Done"
+    
+    // Keyboard appearance
+    manager.keyboardConfiguration.overrideAppearance = true
+    manager.keyboardConfiguration.appearance = .dark
+    
+    return true
+}
+```
+</CodeGroup>
+
+## Benefits of v7 Architecture
+
+<CardGroup cols={2}>
+  <Card title="Cleaner Namespace" icon="broom">
+    The `.iq` wrapper prevents pollution of UIView's namespace
+  </Card>
+  <Card title="Organized Configuration" icon="folder-tree">
+    Related settings grouped into configuration objects
+  </Card>
+  <Card title="Better Discoverability" icon="magnifying-glass">
+    Xcode autocomplete shows related options together
+  </Card>
+  <Card title="Future-Proof" icon="shield">
+    Easier to add new features without API conflicts
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Property not found on UITextField">
+    **Cause**: Forgot to add `.iq` wrapper
+    
+    **Solution**:
+    ```swift
+    // Wrong
+    textField.distanceFromKeyboard = 10
+    
+    // Correct
+    textField.iq.distanceFromKeyboard = 10
+    ```
+  </Accordion>
+  
+  <Accordion title="Cannot find 'toolbarTintColor' in scope">
+    **Cause**: Property moved to configuration object
+    
+    **Solution**:
+    ```swift
+    // Wrong
+    IQKeyboardManager.shared.toolbarTintColor = .blue
+    
+    // Correct
+    IQKeyboardManager.shared.toolbarConfiguration.tintColor = .blue
+    ```
+  </Accordion>
+  
+  <Accordion title="Keyboard monitoring not working">
+    **Cause**: Need to use `IQKeyboardListener` instead
+    
+    **Solution**:
+    ```swift
+    let listener = IQKeyboardListener()
+    listener.registerSizeChange(identifier: "myId") { size in
+        // Handle keyboard size change
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Need Help?
+
+If you encounter issues:
+
+1. Search [GitHub Issues](https://github.com/hackiftekhar/IQKeyboardManager/issues)
+2. Check the [v7 release notes](https://github.com/hackiftekhar/IQKeyboardManager/releases/tag/v7.0.0)
+3. Ask questions in [Discussions](https://github.com/hackiftekhar/IQKeyboardManager/discussions)

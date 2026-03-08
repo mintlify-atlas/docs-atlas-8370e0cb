@@ -1,0 +1,496 @@
+---
+title: Debugging
+description: Enable debug logging and troubleshoot common issues with IQKeyboardManager
+---
+
+## Overview
+
+IQKeyboardManager includes built-in debug logging to help you understand what's happening behind the scenes and troubleshoot issues. This guide covers enabling debug logs, common issues, and how to resolve them.
+
+## Enable Debug Logging
+
+Enable debug logging in your AppDelegate to see detailed information about keyboard events:
+
+```swift AppDelegate.swift
+import IQKeyboardManagerSwift
+
+func application(_ application: UIApplication,
+                 didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    
+    IQKeyboardManager.shared.isEnabled = true
+    
+    // Enable debug logging
+    IQKeyboardManager.shared.isDebuggingEnabled = true
+    
+    return true
+}
+```
+
+<Warning>
+  Debug logging should only be enabled during development. Disable it in production builds to avoid performance impact and log clutter.
+</Warning>
+
+## Debug Log Output
+
+When enabled, you'll see detailed logs in the Xcode console:
+
+```bash Console Output
+IQKeyboardManager| Enabled
+IQKeyboardManager| keyboardWillShow
+IQKeyboardManager|    rootController: <UINavigationController>
+IQKeyboardManager|    textFieldView: <UITextField: 0x7f8b1c507c00>
+IQKeyboardManager|    adjustingHeight: 216.0
+IQKeyboardManager| keyboardDidShow
+IQKeyboardManager| keyboardWillHide
+IQKeyboardManager| restoring previous position
+IQKeyboardManager| keyboardDidHide
+```
+
+## Log Structure
+
+Logs use indentation to show nested operations:
+
+```bash
+IQKeyboardManager|       Top-level event
+IQKeyboardManager|    |  Nested operation
+IQKeyboardManager|    |  |  Deeper nested operation
+```
+
+## Enable Toolbar Debugging
+
+Enable separate debugging for toolbar operations:
+
+```swift AppDelegate.swift
+IQKeyboardManager.shared.enableAutoToolbar = true
+IQKeyboardManager.shared.enableToolbarDebugging = true
+```
+
+You'll see toolbar-specific logs:
+
+```bash Console Output
+IQKeyboardToolbarManager| Toolbar added to <UITextField>
+IQKeyboardToolbarManager| Previous button: enabled
+IQKeyboardToolbarManager| Next button: enabled
+IQKeyboardToolbarManager| Done button: visible
+```
+
+## Conditional Debugging
+
+Enable debugging only in debug builds:
+
+```swift AppDelegate.swift
+func application(_ application: UIApplication,
+                 didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    
+    IQKeyboardManager.shared.isEnabled = true
+    
+    #if DEBUG
+    IQKeyboardManager.shared.isDebuggingEnabled = true
+    IQKeyboardManager.shared.enableToolbarDebugging = true
+    #endif
+    
+    return true
+}
+```
+
+## Common Issues and Solutions
+
+### Keyboard Not Adjusting
+
+<AccordionGroup>
+  <Accordion title="IQKeyboardManager not enabled">
+    **Symptom:** Keyboard covers text fields
+    
+    **Solution:**
+    ```swift
+    IQKeyboardManager.shared.isEnabled = true
+    ```
+    
+    **Debug Check:**
+    Enable logging and look for "Enabled" message at app launch.
+  </Accordion>
+
+  <Accordion title="View controller is disabled">
+    **Symptom:** Works in some view controllers but not others
+    
+    **Solution:**
+    Check if the view controller is in the disabled list:
+    ```swift
+    // Remove from disabled list
+    IQKeyboardManager.shared.disabledDistanceHandlingClasses = 
+        IQKeyboardManager.shared.disabledDistanceHandlingClasses.filter { 
+            $0 != MyViewController.self 
+        }
+    ```
+    
+    **Debug Check:**
+    Look for logs showing the view controller being skipped.
+  </Accordion>
+
+  <Accordion title="Text field has enableMode = .disabled">
+    **Symptom:** Specific text field not adjusting
+    
+    **Solution:**
+    ```swift
+    textField.iq.enableMode = .default // or .enabled
+    ```
+    
+    **Debug Check:**
+    Add a breakpoint and check the field's `enableMode` property.
+  </Accordion>
+
+  <Accordion title="Custom container view">
+    **Symptom:** Text fields in custom containers not detected
+    
+    **Solution:**
+    ```swift
+    IQKeyboardManager.shared.deepResponderAllowedContainerClasses.append(
+        CustomContainerView.self
+    )
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Toolbar Not Appearing
+
+<AccordionGroup>
+  <Accordion title="Auto toolbar not enabled">
+    **Solution:**
+    ```swift
+    IQKeyboardManager.shared.enableAutoToolbar = true
+    ```
+  </Accordion>
+
+  <Accordion title="View controller in disabled list">
+    **Solution:**
+    ```swift
+    IQKeyboardManager.shared.disabledToolbarClasses = 
+        IQKeyboardManager.shared.disabledToolbarClasses.filter { 
+            $0 != MyViewController.self 
+        }
+    ```
+  </Accordion>
+
+  <Accordion title="Custom inputAccessoryView">
+    **Symptom:** You've set a custom `inputAccessoryView`
+    
+    **Explanation:**
+    Custom input accessory views override the automatic toolbar.
+    
+    **Solution:**
+    Remove custom `inputAccessoryView` or integrate it with IQKeyboardToolbarManager.
+  </Accordion>
+</AccordionGroup>
+
+### Tap-to-Dismiss Not Working
+
+<AccordionGroup>
+  <Accordion title="Feature not enabled">
+    **Solution:**
+    ```swift
+    IQKeyboardManager.shared.resignOnTouchOutside = true
+    ```
+  </Accordion>
+
+  <Accordion title="View controller disabled">
+    **Solution:**
+    ```swift
+    IQKeyboardManager.shared.disabledTouchResignedClasses = 
+        IQKeyboardManager.shared.disabledTouchResignedClasses.filter { 
+            $0 != MyViewController.self 
+        }
+    ```
+  </Accordion>
+
+  <Accordion title="Gesture conflict">
+    **Solution:**
+    ```swift
+    // Make your gesture wait for resign gesture to fail
+    myGesture.require(toFail: IQKeyboardManager.shared.resignGesture)
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Performance Issues
+
+<AccordionGroup>
+  <Accordion title="Slow keyboard animation">
+    **Cause:** Complex view hierarchy or Auto Layout constraints
+    
+    **Solution:**
+    ```swift
+    // Optimize Auto Layout
+    // Reduce constraint conflicts
+    // Simplify view hierarchy
+    
+    // Or disable layout forcing:
+    IQKeyboardManager.shared.layoutIfNeededOnUpdate = false
+    ```
+  </Accordion>
+
+  <Accordion title="Debug logging in production">
+    **Cause:** Debug logging enabled in release builds
+    
+    **Solution:**
+    ```swift
+    #if DEBUG
+    IQKeyboardManager.shared.isDebuggingEnabled = true
+    #endif
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Manual Management Tweaks
+
+For cases where automatic behavior doesn't work, you can manually control IQKeyboardManager:
+
+### Temporarily Disable
+
+```swift ViewController.swift
+class SpecialViewController: UIViewController {
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        // Temporarily disable
+        IQKeyboardManager.shared.isEnabled = false
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        // Re-enable
+        IQKeyboardManager.shared.isEnabled = true
+    }
+}
+```
+
+### Manual Position Adjustment
+
+```swift ViewController.swift
+class CustomLayoutViewController: UIViewController {
+    
+    func updateViewLayout() {
+        // Make layout changes
+        updateConstraints()
+        view.layoutIfNeeded()
+        
+        // Notify IQKeyboardManager
+        IQKeyboardManager.shared.reloadLayoutIfNeeded()
+    }
+}
+```
+
+### Custom Distance Calculation
+
+```swift ViewController.swift
+class ComplexFormViewController: UIViewController {
+    
+    @IBOutlet weak var scrollView: UIScrollView!
+    @IBOutlet weak var contentView: UIView!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Adjust distance based on content
+        let contentHeight = contentView.bounds.height
+        let scrollHeight = scrollView.bounds.height
+        
+        if contentHeight > scrollHeight {
+            IQKeyboardManager.shared.keyboardDistance = 30.0
+        } else {
+            IQKeyboardManager.shared.keyboardDistance = 10.0
+        }
+    }
+}
+```
+
+## Known Issues
+
+For a comprehensive list of known issues and workarounds, see:
+
+- [Known Issues Wiki](https://github.com/hackiftekhar/IQKeyboardManager/wiki/Known-Issues)
+- [Manual Management Guide](https://github.com/hackiftekhar/IQKeyboardManager/wiki/Manual-Management)
+
+<Note>
+  The library documentation includes detailed information about edge cases and platform-specific issues.
+</Note>
+
+## Common Warnings
+
+You may see these warnings in the console:
+
+### Negative Distance Warning
+
+```bash
+IQKeyboardManager| ⚠️ keyboardDistance shouldn't be negative.
+```
+
+**Solution:** Ensure `keyboardDistance` is >= 0
+
+```swift
+IQKeyboardManager.shared.keyboardDistance = max(0, calculatedDistance)
+```
+
+### Refuses to Resign Warning
+
+```bash
+IQKeyboardManager| Warning: Refuses to resign first responder: <UITextField>
+```
+
+**Cause:** The text field's delegate returned `false` from `textFieldShouldEndEditing(_:)`
+
+**Solution:** Check your delegate implementation:
+
+```swift
+func textFieldShouldEndEditing(_ textField: UITextField) -> Bool {
+    // Validate and allow resignation
+    return true
+}
+```
+
+## Debugging Checklist
+
+When troubleshooting, go through this checklist:
+
+<Steps>
+  <Step title="Enable debug logging">
+    ```swift
+    IQKeyboardManager.shared.isDebuggingEnabled = true
+    ```
+  </Step>
+
+  <Step title="Check if IQKeyboardManager is enabled">
+    Look for "Enabled" message in console
+  </Step>
+
+  <Step title="Verify view controller not in disabled list">
+    ```swift
+    print(IQKeyboardManager.shared.disabledDistanceHandlingClasses)
+    ```
+  </Step>
+
+  <Step title="Check text field enable mode">
+    ```swift
+    print(textField.iq.enableMode)
+    ```
+  </Step>
+
+  <Step title="Review console logs for errors">
+    Look for warnings or error messages
+  </Step>
+
+  <Step title="Test with minimal configuration">
+    Temporarily remove custom configuration to isolate the issue
+  </Step>
+
+  <Step title="Check for gesture conflicts">
+    Disable custom gestures temporarily
+  </Step>
+</Steps>
+
+## Getting Help
+
+If you're still experiencing issues:
+
+1. **Check the GitHub Issues:** [IQKeyboardManager Issues](https://github.com/hackiftekhar/IQKeyboardManager/issues)
+2. **Review the Wiki:** [IQKeyboardManager Wiki](https://github.com/hackiftekhar/IQKeyboardManager/wiki)
+3. **Create a minimal reproducible example**
+4. **Include debug logs** when reporting issues
+5. **Specify your environment:**
+   - iOS version
+   - Xcode version
+   - IQKeyboardManager version
+   - Swift version
+
+## Debug Configuration Example
+
+Here's a complete debug configuration:
+
+```swift AppDelegate.swift
+import UIKit
+import IQKeyboardManagerSwift
+
+@main
+class AppDelegate: UIResponder, UIApplicationDelegate {
+    
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        
+        configureKeyboardManager()
+        return true
+    }
+    
+    func configureKeyboardManager() {
+        let manager = IQKeyboardManager.shared
+        
+        // Core setup
+        manager.isEnabled = true
+        manager.keyboardDistance = 10.0
+        
+        #if DEBUG
+        // Debug logging
+        manager.isDebuggingEnabled = true
+        manager.enableToolbarDebugging = true
+        
+        // Print configuration
+        printDebugConfiguration()
+        #endif
+    }
+    
+    func printDebugConfiguration() {
+        let manager = IQKeyboardManager.shared
+        
+        print("\n=== IQKeyboardManager Debug Configuration ===")
+        print("Enabled: \(manager.isEnabled)")
+        print("Debugging: \(manager.isDebuggingEnabled)")
+        print("Keyboard Distance: \(manager.keyboardDistance)")
+        print("Resign on Touch: \(manager.resignOnTouchOutside)")
+        print("Auto Toolbar: \(manager.enableAutoToolbar)")
+        print("Disabled Classes: \(manager.disabledDistanceHandlingClasses)")
+        print("Enabled Classes: \(manager.enabledDistanceHandlingClasses)")
+        print("=========================================\n")
+    }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Enable logging early in development">
+    Turn on debug logging when you first integrate IQKeyboardManager to understand its behavior.
+  </Accordion>
+
+  <Accordion title="Disable in production">
+    Always disable debug logging in production builds using `#if DEBUG` conditionals.
+  </Accordion>
+
+  <Accordion title="Keep configuration simple">
+    Start with minimal configuration and only add customization as needed.
+  </Accordion>
+
+  <Accordion title="Document custom behavior">
+    Add comments explaining why you've disabled or configured specific settings.
+  </Accordion>
+
+  <Accordion title="Test thoroughly">
+    Test your forms on different devices, orientations, and iOS versions.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Basic Setup" icon="rocket" href="/guides/basic-setup">
+    Get started with IQKeyboardManager
+  </Card>
+  <Card title="Advanced Configuration" icon="sliders" href="/guides/advanced-configuration">
+    Fine-tune keyboard behavior
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/iqkeyboardmanager">
+    Complete API documentation
+  </Card>
+  <Card title="GitHub Issues" icon="github" href="https://github.com/hackiftekhar/IQKeyboardManager/issues">
+    Report issues or search for solutions
+  </Card>
+</CardGroup>

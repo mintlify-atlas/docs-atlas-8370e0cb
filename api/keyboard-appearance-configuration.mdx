@@ -1,0 +1,100 @@
+---
+title: "IQKeyboardAppearanceConfiguration"
+description: "Configuration class for managing keyboard appearance settings"
+---
+
+## Overview
+
+`IQKeyboardAppearanceConfiguration` is a configuration class that manages keyboard appearance settings for text input views throughout your application. It allows you to override and standardize the keyboard appearance across all text fields and text views.
+
+<Note>
+This class is marked with `@MainActor`, so all property access must occur on the main thread.
+</Note>
+
+## Class Declaration
+
+```swift
+@available(iOSApplicationExtension, unavailable)
+@MainActor
+@objcMembers public final class IQKeyboardAppearanceConfiguration: NSObject
+```
+
+## Properties
+
+<ParamField path="overrideAppearance" type="Bool" default="false">
+  Determines whether to override the keyboard appearance for all text input views. When set to `true`, all text input views will use the appearance specified in the `appearance` property.
+
+  ```swift
+  configuration.overrideAppearance = true
+  ```
+</ParamField>
+
+<ParamField path="appearance" type="UIKeyboardAppearance" default=".default">
+  The keyboard appearance to apply to all text input views when `overrideAppearance` is enabled. This property accepts any value from the `UIKeyboardAppearance` enum.
+
+  ```swift
+  configuration.appearance = .dark
+  ```
+</ParamField>
+
+## UIKeyboardAppearance Values
+
+The `appearance` property accepts the following `UIKeyboardAppearance` enum values:
+
+| Value | Description |
+|-------|-------------|
+| `.default` | The default keyboard appearance for the current input trait settings |
+| `.dark` | A keyboard appearance suitable for a dark UI |
+| `.light` | A keyboard appearance suitable for a light UI |
+| `.alert` | Deprecated. Use `.light` instead |
+
+## Usage Examples
+
+### Basic Configuration
+
+```swift
+let configuration = IQKeyboardAppearanceConfiguration()
+configuration.overrideAppearance = true
+configuration.appearance = .dark
+```
+
+### Integration with IQKeyboardManager
+
+```swift
+// Access through IQKeyboardManager
+IQKeyboardManager.shared.keyboardConfiguration.overrideAppearance = true
+IQKeyboardManager.shared.keyboardConfiguration.appearance = .dark
+```
+
+### Conditional Appearance Based on Dark Mode
+
+```swift
+if traitCollection.userInterfaceStyle == .dark {
+    IQKeyboardManager.shared.keyboardConfiguration.appearance = .dark
+} else {
+    IQKeyboardManager.shared.keyboardConfiguration.appearance = .light
+}
+IQKeyboardManager.shared.keyboardConfiguration.overrideAppearance = true
+```
+
+### Disabling Override
+
+```swift
+// Allow each text field to use its own keyboard appearance
+IQKeyboardManager.shared.keyboardConfiguration.overrideAppearance = false
+```
+
+## Important Notes
+
+<Note>
+  The appearance is only applied when a text input view begins editing. Changing these properties while a keyboard is already visible will not take effect until the next text input view becomes active.
+</Note>
+
+<Note>
+  This class is unavailable in iOS App Extensions due to its dependency on UIApplication features.
+</Note>
+
+## See Also
+
+- [IQKeyboardAppearanceManager](/api/keyboard-appearance-manager) - The internal manager that applies these settings
+- [IQKeyboardManager](/api/iqkeyboardmanager) - The main keyboard manager class

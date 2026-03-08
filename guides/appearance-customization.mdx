@@ -1,0 +1,351 @@
+---
+title: Appearance Customization
+description: Customize keyboard appearance with light and dark themes
+---
+
+## Overview
+
+The Appearance subspec allows you to override the keyboard appearance globally or per-view, making it easy to maintain a consistent look across your app.
+
+## Installation
+
+The Appearance subspec is included by default when you install IQKeyboardManagerSwift:
+
+```ruby Podfile
+pod 'IQKeyboardManagerSwift'
+
+# Or specifically include just the Appearance subspec
+pod 'IQKeyboardManagerSwift/Appearance'
+```
+
+## Configuration Object
+
+Appearance settings are managed through the `IQKeyboardAppearanceConfiguration` object:
+
+```swift AppDelegate.swift
+import IQKeyboardManagerSwift
+
+let config = IQKeyboardManager.shared.keyboardConfiguration
+```
+
+## Global Appearance Override
+
+Set a consistent keyboard appearance for all text fields in your app:
+
+```swift AppDelegate.swift
+func application(_ application: UIApplication,
+                 didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    
+    IQKeyboardManager.shared.isEnabled = true
+    
+    // Enable appearance override
+    let config = IQKeyboardManager.shared.keyboardConfiguration
+    config.overrideAppearance = true
+    config.appearance = .dark
+    
+    return true
+}
+```
+
+## Appearance Options
+
+The keyboard supports three appearance modes:
+
+<ParamField path=".default" type="UIKeyboardAppearance">
+  Uses the system default appearance (light on iOS)
+</ParamField>
+
+<ParamField path=".light" type="UIKeyboardAppearance">
+  Light keyboard with dark text
+</ParamField>
+
+<ParamField path=".dark" type="UIKeyboardAppearance">
+  Dark keyboard with light text
+</ParamField>
+
+## Examples
+
+### Force Dark Keyboard
+
+```swift AppDelegate.swift
+let config = IQKeyboardManager.shared.keyboardConfiguration
+config.overrideAppearance = true
+config.appearance = .dark
+```
+
+### Force Light Keyboard
+
+```swift AppDelegate.swift
+let config = IQKeyboardManager.shared.keyboardConfiguration
+config.overrideAppearance = true
+config.appearance = .light
+```
+
+### Use System Default
+
+```swift AppDelegate.swift
+let config = IQKeyboardManager.shared.keyboardConfiguration
+config.overrideAppearance = false
+// or
+config.overrideAppearance = true
+config.appearance = .default
+```
+
+## Per-View Appearance
+
+While the global configuration affects all text fields, individual text fields can still set their own keyboard appearance when override is disabled:
+
+```swift ViewController.swift
+import UIKit
+
+class CustomViewController: UIViewController {
+    
+    @IBOutlet weak var standardField: UITextField!
+    @IBOutlet weak var darkField: UITextField!
+    @IBOutlet weak var lightField: UITextField!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Only works when overrideAppearance is false
+        standardField.keyboardAppearance = .default
+        darkField.keyboardAppearance = .dark
+        lightField.keyboardAppearance = .light
+    }
+}
+```
+
+<Warning>
+  Per-view keyboard appearance settings are ignored when `overrideAppearance` is `true`.
+</Warning>
+
+## Dynamic Appearance Changes
+
+You can change the keyboard appearance at runtime:
+
+```swift ViewController.swift
+class SettingsViewController: UIViewController {
+    
+    @IBAction func toggleKeyboardTheme(_ sender: UISwitch) {
+        let config = IQKeyboardManager.shared.keyboardConfiguration
+        config.overrideAppearance = sender.isOn
+        config.appearance = sender.isOn ? .dark : .default
+        
+        // Reload keyboard if currently visible
+        if let activeField = view.findFirstResponder() as? UITextField {
+            activeField.reloadInputViews()
+        }
+    }
+}
+```
+
+## Dark Mode Support
+
+To automatically match system dark mode:
+
+```swift AppDelegate.swift
+func application(_ application: UIApplication,
+                 didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    
+    IQKeyboardManager.shared.isEnabled = true
+    
+    // Match system appearance
+    updateKeyboardAppearance()
+    
+    return true
+}
+
+func updateKeyboardAppearance() {
+    let config = IQKeyboardManager.shared.keyboardConfiguration
+    config.overrideAppearance = true
+    
+    if #available(iOS 13.0, *) {
+        if UITraitCollection.current.userInterfaceStyle == .dark {
+            config.appearance = .dark
+        } else {
+            config.appearance = .light
+        }
+    } else {
+        config.appearance = .default
+    }
+}
+```
+
+### Respond to Dark Mode Changes
+
+```swift ViewController.swift
+class BaseViewController: UIViewController {
+    
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        
+        if #available(iOS 13.0, *) {
+            if traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) {
+                updateKeyboardAppearance()
+            }
+        }
+    }
+    
+    func updateKeyboardAppearance() {
+        let config = IQKeyboardManager.shared.keyboardConfiguration
+        config.overrideAppearance = true
+        
+        if #available(iOS 13.0, *) {
+            config.appearance = traitCollection.userInterfaceStyle == .dark ? .dark : .light
+        }
+        
+        // Reload keyboard if visible
+        view.endEditing(true)
+    }
+}
+```
+
+## Complete Example
+
+Here's a complete example with theme switching:
+
+```swift ThemeManager.swift
+import UIKit
+import IQKeyboardManagerSwift
+
+class ThemeManager {
+    
+    static let shared = ThemeManager()
+    
+    enum Theme {
+        case light
+        case dark
+        case auto
+    }
+    
+    var currentTheme: Theme = .auto {
+        didSet {
+            applyTheme()
+        }
+    }
+    
+    func applyTheme() {
+        let config = IQKeyboardManager.shared.keyboardConfiguration
+        config.overrideAppearance = true
+        
+        switch currentTheme {
+        case .light:
+            config.appearance = .light
+            
+        case .dark:
+            config.appearance = .dark
+            
+        case .auto:
+            if #available(iOS 13.0, *) {
+                let isDark = UITraitCollection.current.userInterfaceStyle == .dark
+                config.appearance = isDark ? .dark : .light
+            } else {
+                config.appearance = .default
+            }
+        }
+    }
+}
+```
+
+```swift SettingsViewController.swift
+class SettingsViewController: UIViewController {
+    
+    @IBAction func themeChanged(_ sender: UISegmentedControl) {
+        switch sender.selectedSegmentIndex {
+        case 0:
+            ThemeManager.shared.currentTheme = .light
+        case 1:
+            ThemeManager.shared.currentTheme = .dark
+        case 2:
+            ThemeManager.shared.currentTheme = .auto
+        default:
+            break
+        }
+    }
+}
+```
+
+## Configuration Properties
+
+<ResponseField name="overrideAppearance" type="Bool" default="false">
+  When `true`, applies the configured appearance to all text input views, ignoring individual `keyboardAppearance` settings.
+</ResponseField>
+
+<ResponseField name="appearance" type="UIKeyboardAppearance" default=".default">
+  The keyboard appearance to use when `overrideAppearance` is `true`. Options: `.default`, `.light`, `.dark`.
+</ResponseField>
+
+## When Override is Disabled
+
+When `overrideAppearance` is `false`:
+
+- Each text field uses its own `keyboardAppearance` property
+- UITextField and UITextView default to `.default`
+- You can set different appearances for different fields
+- System respects individual field settings
+
+```swift ViewController.swift
+// Disable global override
+let config = IQKeyboardManager.shared.keyboardConfiguration
+config.overrideAppearance = false
+
+// Now individual field settings work
+textField1.keyboardAppearance = .dark
+textField2.keyboardAppearance = .light
+textField3.keyboardAppearance = .default
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Match your app's theme">
+    Set the keyboard appearance to match your app's overall theme for a cohesive user experience.
+  </Accordion>
+
+  <Accordion title="Consider accessibility">
+    Some users may find dark keyboards easier to read in low-light conditions, while others prefer light keyboards.
+  </Accordion>
+
+  <Accordion title="Test both appearances">
+    Always test your forms with both light and dark keyboard appearances to ensure text visibility.
+  </Accordion>
+
+  <Accordion title="Reload keyboard after changes">
+    Call `reloadInputViews()` on active text fields after changing appearance settings to see changes immediately.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Appearance not changing">
+    - Verify `overrideAppearance` is set to `true`
+    - Call `reloadInputViews()` on the active text field
+    - Check if a custom `inputView` is overriding the keyboard
+  </Accordion>
+
+  <Accordion title="Individual field settings ignored">
+    This is expected when `overrideAppearance` is `true`. Set it to `false` to respect individual field settings.
+  </Accordion>
+
+  <Accordion title="Dark mode not syncing">
+    Implement `traitCollectionDidChange(_:)` in your view controller to respond to system appearance changes.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Advanced Configuration" icon="sliders" href="/guides/advanced-configuration">
+    Customize keyboard distance and behavior
+  </Card>
+  <Card title="Toolbar Management" icon="wrench" href="/guides/toolbar-management">
+    Add Previous/Next/Done buttons
+  </Card>
+  <Card title="Resign Keyboard" icon="hand" href="/guides/resign-keyboard">
+    Dismiss keyboard on tap outside
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/appearance-configuration">
+    Full appearance API documentation
+  </Card>
+</CardGroup>

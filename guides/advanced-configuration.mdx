@@ -1,0 +1,270 @@
+---
+title: Advanced Configuration
+description: Fine-tune IQKeyboardManager behavior with class-level controls and view-specific settings
+---
+
+## Overview
+
+While IQKeyboardManager works great with default settings, you may need to customize its behavior for specific view controllers or text fields. This guide covers advanced configuration options.
+
+## Keyboard Distance Customization
+
+### Global Distance
+
+Set the default distance between the keyboard and text fields for your entire app:
+
+```swift AppDelegate.swift
+IQKeyboardManager.shared.keyboardDistance = 20.0
+```
+
+<Note>
+  The default value is `10.0` points. Negative values will trigger a warning log.
+</Note>
+
+### Per-View Distance
+
+Override the keyboard distance for specific text fields:
+
+```swift ViewController.swift
+import IQKeyboardManagerSwift
+
+class ProfileViewController: UIViewController {
+    
+    @IBOutlet weak var usernameTextField: UITextField!
+    @IBOutlet weak var bioTextView: UITextView!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Custom distance for username field
+        usernameTextField.iq.distanceFromKeyboard = 30.0
+        
+        // Custom distance for bio text view
+        bioTextView.iq.distanceFromKeyboard = 50.0
+        
+        // Reset to use global distance
+        // usernameTextField.iq.distanceFromKeyboard = UIView.defaultKeyboardDistance
+    }
+}
+```
+
+<Warning>
+  Distance values cannot be negative. Setting a negative value may cause unexpected behavior.
+</Warning>
+
+## Enable/Disable Per View
+
+Control keyboard management for individual text fields using `enableMode`:
+
+```swift ViewController.swift
+class CustomViewController: UIViewController {
+    
+    @IBOutlet weak var standardTextField: UITextField!
+    @IBOutlet weak var customTextField: UITextField!
+    @IBOutlet weak var disabledTextField: UITextField!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Use global setting (default)
+        standardTextField.iq.enableMode = .default
+        
+        // Force enable even if IQKeyboardManager is globally disabled
+        customTextField.iq.enableMode = .enabled
+        
+        // Force disable for this field
+        disabledTextField.iq.enableMode = .disabled
+    }
+}
+```
+
+### Enable Modes
+
+<ParamField path=".default" type="IQEnableMode">
+  Uses the global `IQKeyboardManager.shared.isEnabled` setting
+</ParamField>
+
+<ParamField path=".enabled" type="IQEnableMode">
+  Force enables keyboard management for this view
+</ParamField>
+
+<ParamField path=".disabled" type="IQEnableMode">
+  Force disables keyboard management for this view
+</ParamField>
+
+## Class-Level Controls
+
+### Disable for Specific View Controllers
+
+Prevent keyboard management for entire view controller classes:
+
+```swift AppDelegate.swift
+IQKeyboardManager.shared.disabledDistanceHandlingClasses.append(LoginViewController.self)
+
+// Disable for multiple view controllers
+IQKeyboardManager.shared.disabledDistanceHandlingClasses += [
+    LoginViewController.self,
+    SignupViewController.self,
+    CustomFormViewController.self
+]
+```
+
+<Note>
+  By default, these classes are disabled:
+  - `UITableViewController`
+  - `UIInputViewController`
+  - `UIAlertController`
+</Note>
+
+### Force Enable for Specific Classes
+
+Force enable keyboard management for specific view controller classes:
+
+```swift AppDelegate.swift
+IQKeyboardManager.shared.enabledDistanceHandlingClasses.append(SpecialViewController.self)
+```
+
+<Warning>
+  If a class appears in both `disabledDistanceHandlingClasses` and `enabledDistanceHandlingClasses`, the disabled list takes precedence.
+</Warning>
+
+## Handling Edge Cases
+
+### Manual Layout Adjustments
+
+If you make programmatic changes to the view hierarchy, call `reloadLayoutIfNeeded()`:
+
+```swift ViewController.swift
+class DynamicViewController: UIViewController {
+    
+    @IBOutlet weak var containerView: UIView!
+    
+    func updateLayout() {
+        // Modify view frames programmatically
+        containerView.frame = CGRect(x: 0, y: 100, width: view.bounds.width, height: 300)
+        
+        // Notify IQKeyboardManager to recalculate position
+        IQKeyboardManager.shared.reloadLayoutIfNeeded()
+    }
+    
+    func updateConstraints() {
+        // Update Auto Layout constraints
+        NSLayoutConstraint.activate(newConstraints)
+        view.layoutIfNeeded()
+        
+        // Trigger position adjustment
+        IQKeyboardManager.shared.reloadLayoutIfNeeded()
+    }
+}
+```
+
+<Tip>
+  `reloadLayoutIfNeeded()` only has an effect when:
+  - `isEnabled` is `true`
+  - A text input view is active
+  - The keyboard is visible
+  - The root configuration is ready
+</Tip>
+
+### Force Layout Updates
+
+Enable `layoutIfNeededOnUpdate` to force layout updates on every frame change:
+
+```swift AppDelegate.swift
+IQKeyboardManager.shared.layoutIfNeededOnUpdate = true
+```
+
+<Note>
+  This calls `setNeedsLayout()` and `layoutIfNeeded()` on frame updates. Use sparingly as it may impact performance.
+</Note>
+
+## Example: Complex Form
+
+Here's a complete example combining multiple configuration options:
+
+```swift ComplexFormViewController.swift
+import UIKit
+import IQKeyboardManagerSwift
+
+class ComplexFormViewController: UIViewController {
+    
+    @IBOutlet weak var emailField: UITextField!
+    @IBOutlet weak var passwordField: UITextField!
+    @IBOutlet weak var notesField: UITextView!
+    @IBOutlet weak var customField: UITextField!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Standard fields use global settings
+        
+        // Notes field needs more space
+        notesField.iq.distanceFromKeyboard = 40.0
+        
+        // Custom field has its own keyboard handling
+        customField.iq.enableMode = .disabled
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        // Temporarily increase keyboard distance
+        IQKeyboardManager.shared.keyboardDistance = 25.0
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        // Restore default distance
+        IQKeyboardManager.shared.keyboardDistance = 10.0
+    }
+}
+```
+
+## Configuration Priority
+
+The configuration system follows this priority order (highest to lowest):
+
+1. **View-specific `enableMode`** - `.enabled` or `.disabled`
+2. **Class-level disabled list** - `disabledDistanceHandlingClasses`
+3. **Class-level enabled list** - `enabledDistanceHandlingClasses`
+4. **Global enable** - `IQKeyboardManager.shared.isEnabled`
+5. **View-specific distance** - `view.iq.distanceFromKeyboard`
+6. **Global distance** - `IQKeyboardManager.shared.keyboardDistance`
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use global settings when possible">
+    Set global defaults in AppDelegate and only override for special cases. This keeps your codebase clean and maintainable.
+  </Accordion>
+
+  <Accordion title="Disable at the class level, not per instance">
+    If you need to disable IQKeyboardManager for a view controller, add it to `disabledDistanceHandlingClasses` instead of disabling it in `viewWillAppear` and re-enabling in `viewWillDisappear`.
+  </Accordion>
+
+  <Accordion title="Test edge cases thoroughly">
+    Test your configuration with different keyboard types, screen orientations, and device sizes to ensure consistent behavior.
+  </Accordion>
+
+  <Accordion title="Document custom configurations">
+    Add comments explaining why you've customized specific views or view controllers.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Toolbar Management" icon="wrench" href="/guides/toolbar-management">
+    Add navigation buttons to the keyboard toolbar
+  </Card>
+  <Card title="Appearance Customization" icon="palette" href="/guides/appearance-customization">
+    Customize keyboard appearance (light/dark)
+  </Card>
+  <Card title="Debugging" icon="bug" href="/guides/debugging">
+    Enable debug logging and troubleshooting
+  </Card>
+  <Card title="API Reference" icon="book" href="/api-reference/iqkeyboardmanager">
+    Full API documentation
+  </Card>
+</CardGroup>

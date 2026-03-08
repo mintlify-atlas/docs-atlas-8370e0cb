@@ -1,0 +1,146 @@
+---
+title: Migration Guide Overview
+description: Guide to migrating between major versions of IQKeyboardManager
+---
+
+## Overview
+
+This section provides comprehensive migration guides for upgrading IQKeyboardManager between major versions. Each guide details breaking changes, deprecated APIs, and step-by-step instructions to update your code.
+
+## Available Migration Guides
+
+<CardGroup cols={2}>
+  <Card title="v7 to v8" icon="arrow-up" href="/migration/v7-to-v8">
+    Latest migration guide with modular architecture changes
+  </Card>
+  <Card title="v6 to v7" icon="arrow-up" href="/migration/v6-to-v7">
+    Configuration consolidation and wrapper pattern
+  </Card>
+  <Card title="v5 to v6" icon="arrow-up" href="/migration/v5-to-v6">
+    API renaming and new features
+  </Card>
+</CardGroup>
+
+## When to Migrate
+
+<Note>
+  **Stay on Latest**: We recommend staying on the latest major version to receive bug fixes, performance improvements, and new features.
+</Note>
+
+Consider migrating when:
+- You need features only available in newer versions
+- Security updates require a newer version
+- You're starting a new project (use the latest version)
+- Your dependencies require a newer version
+
+## General Migration Principles
+
+### 1. Review Breaking Changes First
+
+Before migrating, carefully read the breaking changes section in the relevant migration guide. This helps you understand the scope of changes required.
+
+### 2. Update Dependencies
+
+<Steps>
+  <Step title="Update Package Manager">
+    Update your `Podfile`, `Package.swift`, or `Cartfile` to the new version
+  </Step>
+  <Step title="Install Dependencies">
+    Run your package manager to install the new version
+  </Step>
+  <Step title="Fix Compilation Errors">
+    Address any compilation errors highlighted by Xcode
+  </Step>
+  <Step title="Test Thoroughly">
+    Test all keyboard-related functionality in your app
+  </Step>
+</Steps>
+
+### 3. Incremental Migration
+
+<Warning>
+  **Avoid Skipping Versions**: If you're multiple versions behind, migrate incrementally (e.g., v5 → v6 → v7 → v8) rather than jumping directly to the latest version.
+</Warning>
+
+Migrating one major version at a time:
+- Makes changes more manageable
+- Reduces the risk of introducing bugs
+- Helps you understand the evolution of the API
+
+### 4. Use Compiler Warnings
+
+The library marks deprecated APIs with compiler warnings. These warnings guide you to the new APIs:
+
+```swift
+// Deprecated API (will show warning)
+IQKeyboardManager.shared.shouldResignOnTouchOutside = true
+
+// New API
+IQKeyboardManager.shared.resignOnTouchOutside = true
+```
+
+### 5. Test Common Scenarios
+
+After migration, test these common scenarios:
+
+<AccordionGroup>
+  <Accordion title="Basic Keyboard Handling">
+    - Text fields properly scroll when keyboard appears
+    - Keyboard dismisses when tapping outside
+    - Multiple text fields on screen work correctly
+  </Accordion>
+  
+  <Accordion title="Toolbar Features">
+    - Previous/Next buttons navigate correctly
+    - Done button dismisses keyboard
+    - Custom toolbar items appear as expected
+  </Accordion>
+  
+  <Accordion title="Edge Cases">
+    - ScrollView with nested text fields
+    - Text fields in table/collection view cells
+    - Modal presentations and navigation
+    - Landscape and iPad layouts
+  </Accordion>
+</AccordionGroup>
+
+## Support Policy
+
+### Active Support
+
+<Info>
+  Only the latest major version receives active feature development and bug fixes.
+</Info>
+
+### Security Updates
+
+Critical security issues may be backported to the previous major version for a limited time.
+
+### Community Support
+
+Older versions are community-supported through:
+- GitHub issues and discussions
+- Stack Overflow
+- Community forums
+
+## Getting Help
+
+If you encounter issues during migration:
+
+1. **Check the Migration Guide**: Review the specific version migration guide thoroughly
+2. **Search Issues**: Look for similar issues on [GitHub](https://github.com/hackiftekhar/IQKeyboardManager/issues)
+3. **Ask for Help**: Create a new issue with:
+   - Source version and target version
+   - Specific error messages or unexpected behavior
+   - Minimal code example reproducing the issue
+   - Steps you've already tried
+
+## Next Steps
+
+Select the migration guide that matches your current and target versions:
+
+<CardGroup cols={3}>
+  <Card title="v7 → v8" href="/migration/v7-to-v8" />
+  <Card title="v6 → v7" href="/migration/v6-to-v7" />
+  <Card title="v5 → v6" href="/migration/v5-to-v6" />
+</CardGroup>

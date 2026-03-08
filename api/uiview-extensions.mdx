@@ -1,0 +1,125 @@
+---
+title: 'UIView Extensions'
+description: 'Per-view keyboard management configuration'
+---
+
+## Overview
+
+The UIView extensions provide per-view customization of keyboard management behavior through the `.iq` wrapper pattern. These extensions allow you to override global settings for specific text input views.
+
+### The `.iq` Wrapper Pattern
+
+All extension properties are accessed through the `.iq` namespace on UIView instances:
+
+```swift
+textField.iq.distanceFromKeyboard = 30.0
+textField.iq.enableMode = .disabled
+```
+
+This pattern keeps IQKeyboardManager extensions cleanly separated from native UIKit APIs.
+
+## Properties
+
+<ParamField path="distanceFromKeyboard" type="CGFloat" default="UIView.defaultKeyboardDistance">
+  Custom distance from keyboard for this specific text input view.
+  
+  If set to `UIView.defaultKeyboardDistance`, the global `keyboardDistance` value from `IQKeyboardManager.shared.keyboardDistance` will be used. Otherwise, this value takes precedence.
+  
+  **Note:** Value cannot be negative. Negative values may cause unexpected behavior.
+  
+  ```swift
+  // Use global setting
+  textField.iq.distanceFromKeyboard = UIView.defaultKeyboardDistance
+  
+  // Use custom distance of 50 points
+  textField.iq.distanceFromKeyboard = 50.0
+  ```
+</ParamField>
+
+<ParamField path="enableMode" type="IQEnableMode" default=".default">
+  Enable mode for this specific text input view.
+  
+  Controls whether keyboard management is enabled, disabled, or uses the default global setting for this view.
+  
+  **Values:**
+  - `.default` - Use global `IQKeyboardManager.shared.isEnabled` setting
+  - `.enabled` - Force enable keyboard management for this view
+  - `.disabled` - Force disable keyboard management for this view
+  
+  ```swift
+  // Use global setting
+  textField.iq.enableMode = .default
+  
+  // Always enable for this field
+  textField.iq.enableMode = .enabled
+  
+  // Always disable for this field (useful for custom keyboards)
+  textField.iq.enableMode = .disabled
+  ```
+</ParamField>
+
+## Available Properties Summary
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `distanceFromKeyboard` | `CGFloat` | `UIView.defaultKeyboardDistance` | Custom keyboard distance for this view |
+| `enableMode` | `IQEnableMode` | `.default` | Enable/disable mode for this view |
+
+## Usage Examples
+
+### Custom Distance for Specific Fields
+
+```swift
+class MyViewController: UIViewController {
+    @IBOutlet weak var emailTextField: UITextField!
+    @IBOutlet weak var passwordTextField: UITextField!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Email field needs more space from keyboard
+        emailTextField.iq.distanceFromKeyboard = 50.0
+        
+        // Password field uses default distance
+        passwordTextField.iq.distanceFromKeyboard = UIView.defaultKeyboardDistance
+    }
+}
+```
+
+### Disabling Keyboard Management for Custom Keyboards
+
+```swift
+class CustomKeyboardViewController: UIViewController {
+    @IBOutlet weak var customTextField: UITextField!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Disable IQKeyboardManager for fields with custom input views
+        customTextField.iq.enableMode = .disabled
+        customTextField.inputView = customKeyboardView
+    }
+}
+```
+
+### Force Enable for Specific Fields
+
+```swift
+class FormViewController: UIViewController {
+    @IBOutlet weak var importantTextField: UITextField!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Force enable even if IQKeyboardManager is globally disabled
+        importantTextField.iq.enableMode = .enabled
+        importantTextField.iq.distanceFromKeyboard = 20.0
+    }
+}
+```
+
+## See Also
+
+- [UIScrollView Extensions](/api/uiscrollview-extensions) - Scroll view specific extensions
+- [Configuration](/core/configuration) - Global keyboard manager settings
+- [IQKeyboardManager](/api/iqkeyboardmanager) - Main keyboard manager class

@@ -1,0 +1,456 @@
+---
+title: Resign Keyboard
+description: Dismiss the keyboard by tapping outside text fields
+---
+
+## Overview
+
+The Resign subspec enables "tap-to-dismiss" functionality, allowing users to dismiss the keyboard by tapping anywhere outside of the active text field. This provides an intuitive way to close the keyboard without requiring a Done button.
+
+## Installation
+
+### CocoaPods
+
+```ruby Podfile
+# Include as part of IQKeyboardManagerSwift
+pod 'IQKeyboardManagerSwift'
+
+# Or include the specific subspec
+pod 'IQKeyboardManagerSwift/Resign'
+```
+
+### Swift Package Manager
+
+The Resign functionality is included in the main package:
+```
+https://github.com/hackiftekhar/IQKeyboardManager.git
+```
+
+## Basic Setup
+
+<Steps>
+  <Step title="Import the library">
+    ```swift AppDelegate.swift
+    import IQKeyboardManagerSwift
+    ```
+  </Step>
+
+  <Step title="Enable resign on touch outside">
+    ```swift AppDelegate.swift
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        
+        // Enable keyboard management
+        IQKeyboardManager.shared.isEnabled = true
+        
+        // Enable tap-to-dismiss
+        IQKeyboardManager.shared.resignOnTouchOutside = true
+        
+        return true
+    }
+    ```
+  </Step>
+
+  <Step title="Test tap-to-dismiss">
+    Run your app, tap on a text field to show the keyboard, then tap anywhere outside the text field to dismiss it.
+  </Step>
+</Steps>
+
+## How It Works
+
+When enabled, IQKeyboardManager:
+
+1. Adds a tap gesture recognizer to the window
+2. Detects taps outside active text fields
+3. Dismisses the keyboard when a tap is detected
+4. Ignores taps on interactive controls (buttons, switches, etc.)
+5. Handles conflicts with existing gestures
+
+## Configuration
+
+### Enable/Disable
+
+```swift
+// Enable tap-to-dismiss
+IQKeyboardManager.shared.resignOnTouchOutside = true
+
+// Disable tap-to-dismiss
+IQKeyboardManager.shared.resignOnTouchOutside = false
+```
+
+### Programmatic Dismissal
+
+Manually dismiss the keyboard:
+
+```swift ViewController.swift
+import IQKeyboardManagerSwift
+
+class FormViewController: UIViewController {
+    
+    @IBAction func submitForm(_ sender: UIButton) {
+        // Dismiss keyboard before processing
+        IQKeyboardManager.shared.resignFirstResponder()
+        
+        // Process form
+        processFormData()
+    }
+    
+    @IBAction func cancelForm(_ sender: UIButton) {
+        // Alternative way to dismiss
+        view.endEditing(true)
+    }
+    
+    func processFormData() {
+        // Handle form submission
+    }
+}
+```
+
+## Class-Level Control
+
+### Disable for Specific View Controllers
+
+Prevent tap-to-dismiss for specific view controllers:
+
+```swift AppDelegate.swift
+// Enable globally
+IQKeyboardManager.shared.resignOnTouchOutside = true
+
+// Disable for specific view controllers
+IQKeyboardManager.shared.disabledTouchResignedClasses = [
+    ChatViewController.self,
+    SearchViewController.self
+]
+```
+
+<Note>
+  By default, `UIAlertController` and `UIInputViewController` are in the disabled list.
+</Note>
+
+### Force Enable for Specific Classes
+
+```swift AppDelegate.swift
+IQKeyboardManager.shared.enabledTouchResignedClasses = [
+    CustomFormViewController.self,
+    ProfileViewController.self
+]
+```
+
+<Warning>
+  If a class appears in both `disabledTouchResignedClasses` and `enabledTouchResignedClasses`, the disabled list takes precedence.
+</Warning>
+
+## Ignore Specific View Types
+
+Prevent tap-to-dismiss when tapping on specific view types:
+
+```swift AppDelegate.swift
+// Default ignored classes: [UIControl, UINavigationBar]
+IQKeyboardManager.shared.touchResignedGestureIgnoreClasses = [
+    UIControl.self,
+    UINavigationBar.self,
+    UITableViewCell.self,
+    CustomInteractiveView.self
+]
+```
+
+<Tip>
+  By default, taps on `UIControl` (buttons, switches, etc.) and `UINavigationBar` won't dismiss the keyboard, allowing users to interact with these elements while the keyboard is visible.
+</Tip>
+
+## Gesture Recognizer Access
+
+Access the tap gesture recognizer to handle conflicts:
+
+```swift ViewController.swift
+import IQKeyboardManagerSwift
+
+class CustomViewController: UIViewController {
+    
+    var customTapGesture: UITapGestureRecognizer!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Add custom tap gesture
+        customTapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTap))
+        view.addGestureRecognizer(customTapGesture)
+        
+        // Handle conflicts with IQKeyboardManager
+        let resignGesture = IQKeyboardManager.shared.resignGesture
+        customTapGesture.require(toFail: resignGesture)
+    }
+    
+    @objc func handleTap() {
+        // Custom tap handling
+    }
+}
+```
+
+## Complete Example
+
+```swift ViewController.swift
+import UIKit
+import IQKeyboardManagerSwift
+
+class CommentViewController: UIViewController {
+    
+    @IBOutlet weak var commentTextView: UITextView!
+    @IBOutlet weak var submitButton: UIButton!
+    @IBOutlet weak var cancelButton: UIButton!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupKeyboardDismissal()
+    }
+    
+    func setupKeyboardDismissal() {
+        // Resign on touch is enabled globally
+        // Tapping outside the text view will dismiss keyboard
+        // Tapping buttons won't dismiss (they're UIControl)
+    }
+    
+    @IBAction func submitComment(_ sender: UIButton) {
+        // Button tap won't dismiss keyboard automatically
+        // Manually dismiss before processing
+        IQKeyboardManager.shared.resignFirstResponder()
+        
+        // Process comment
+        postComment(commentTextView.text)
+    }
+    
+    @IBAction func cancel(_ sender: UIButton) {
+        // Dismiss keyboard and close view
+        view.endEditing(true)
+        dismiss(animated: true)
+    }
+    
+    func postComment(_ text: String) {
+        // Submit comment to server
+    }
+}
+```
+
+## Advanced Scenarios
+
+### Conditional Resign
+
+Enable resign on touch only for specific scenarios:
+
+```swift ViewController.swift
+class DynamicFormViewController: UIViewController {
+    
+    var isEditMode: Bool = false {
+        didSet {
+            // Enable tap-to-dismiss in edit mode
+            IQKeyboardManager.shared.resignOnTouchOutside = isEditMode
+        }
+    }
+    
+    @IBAction func toggleEditMode(_ sender: UIButton) {
+        isEditMode.toggle()
+    }
+}
+```
+
+### Per-View Controller Control
+
+```swift ViewController.swift
+class BaseViewController: UIViewController {
+    
+    var shouldResignOnTouchOutside: Bool = true
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        // Configure for this view controller
+        IQKeyboardManager.shared.resignOnTouchOutside = shouldResignOnTouchOutside
+    }
+}
+
+class ChatViewController: BaseViewController {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // Disable tap-to-dismiss for chat
+        shouldResignOnTouchOutside = false
+    }
+}
+
+class ProfileViewController: BaseViewController {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // Enable tap-to-dismiss for profile editing
+        shouldResignOnTouchOutside = true
+    }
+}
+```
+
+### Custom Gesture Handling
+
+```swift ViewController.swift
+class InteractiveViewController: UIViewController, UIGestureRecognizerDelegate {
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Add custom double-tap gesture
+        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap))
+        doubleTap.numberOfTapsRequired = 2
+        doubleTap.delegate = self
+        view.addGestureRecognizer(doubleTap)
+        
+        // Make IQKeyboardManager's tap gesture wait for double-tap to fail
+        IQKeyboardManager.shared.resignGesture.require(toFail: doubleTap)
+    }
+    
+    @objc func handleDoubleTap() {
+        print("Double tap detected")
+    }
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                          shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return false
+    }
+}
+```
+
+## UIScrollView Interaction
+
+Handling tap-to-dismiss with scroll views:
+
+```swift ViewController.swift
+class ScrollableFormViewController: UIViewController {
+    
+    @IBOutlet weak var scrollView: UIScrollView!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Enable tap-to-dismiss
+        // Taps on scroll view background will dismiss keyboard
+        // Scrolling won't dismiss keyboard
+        IQKeyboardManager.shared.resignOnTouchOutside = true
+    }
+}
+```
+
+## Resign vs Done Button
+
+<CardGroup cols={2}>
+  <Card title="Tap-to-Dismiss" icon="hand">
+    **Best for:**
+    - Single text field screens
+    - Simple forms
+    - Modal text input
+    - Quick edits
+    
+    **Advantages:**
+    - Natural gesture
+    - No UI required
+    - Works anywhere
+  </Card>
+  
+  <Card title="Done/Toolbar Button" icon="check">
+    **Best for:**
+    - Multi-field forms
+    - Guided input flows
+    - Complex forms
+    - Required validation
+    
+    **Advantages:**
+    - Clear action
+    - More discoverable
+    - Can trigger validation
+  </Card>
+</CardGroup>
+
+<Tip>
+  You can use both tap-to-dismiss and toolbar buttons together for maximum flexibility.
+</Tip>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Enable for most screens">
+    Tap-to-dismiss is intuitive and should be enabled for most screens. Only disable it when you have specific interaction requirements.
+  </Accordion>
+
+  <Accordion title="Consider UIControl conflicts">
+    The default configuration ignores taps on buttons and controls, which is usually what you want. Users can tap buttons without dismissing the keyboard.
+  </Accordion>
+
+  <Accordion title="Test gesture interactions">
+    If your app uses custom gestures, test thoroughly to ensure they don't conflict with the resign gesture.
+  </Accordion>
+
+  <Accordion title="Provide visual feedback">
+    Consider adding visual feedback when the keyboard dismisses to help users understand the interaction.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Tap-to-dismiss not working">
+    - Verify `resignOnTouchOutside` is set to `true`
+    - Check if the view controller is in `disabledTouchResignedClasses`
+    - Ensure no other gesture is blocking the tap gesture
+    - Check if a custom gesture has higher priority
+  </Accordion>
+
+  <Accordion title="Buttons not working">
+    - Verify `UIControl` is in `touchResignedGestureIgnoreClasses`
+    - Check if button's `isUserInteractionEnabled` is `true`
+    - Ensure button is not hidden or has zero alpha
+  </Accordion>
+
+  <Accordion title="Gesture conflicts">
+    - Use `require(toFail:)` to manage gesture priority
+    - Implement `UIGestureRecognizerDelegate` for custom control
+    - Access `IQKeyboardManager.shared.resignGesture` to handle conflicts
+  </Accordion>
+
+  <Accordion title="Table view cells not responding">
+    - Add `UITableViewCell` to `touchResignedGestureIgnoreClasses`
+    - Or implement `tableView(_:didSelectRowAt:)` to dismiss manually
+  </Accordion>
+</AccordionGroup>
+
+## Related Properties
+
+<ResponseField name="resignOnTouchOutside" type="Bool" default="false">
+  Enable tap-to-dismiss keyboard functionality
+</ResponseField>
+
+<ResponseField name="resignGesture" type="UITapGestureRecognizer" default="UITapGestureRecognizer()">
+  The tap gesture recognizer used for dismiss functionality. Read-only, exposed for handling gesture dependencies.
+</ResponseField>
+
+<ResponseField name="disabledTouchResignedClasses" type="[UIViewController.Type]" default="[UIAlertController.self, UIInputViewController.self]">
+  View controller classes where tap-to-dismiss is disabled
+</ResponseField>
+
+<ResponseField name="enabledTouchResignedClasses" type="[UIViewController.Type]" default="[]">
+  View controller classes where tap-to-dismiss is force-enabled
+</ResponseField>
+
+<ResponseField name="touchResignedGestureIgnoreClasses" type="[UIView.Type]" default="[UIControl.self, UINavigationBar.self]">
+  View classes that won't trigger tap-to-dismiss when tapped
+</ResponseField>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Advanced Configuration" icon="sliders" href="/guides/advanced-configuration">
+    Fine-tune keyboard behavior
+  </Card>
+  <Card title="Toolbar Management" icon="wrench" href="/guides/toolbar-management">
+    Add navigation buttons to keyboard
+  </Card>
+  <Card title="Debugging" icon="bug" href="/guides/debugging">
+    Troubleshoot resign issues
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/iqkeyboardmanager">
+    Full API documentation
+  </Card>
+</CardGroup>

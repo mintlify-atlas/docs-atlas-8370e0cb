@@ -1,0 +1,395 @@
+---
+title: Return Key Handling
+description: Automatically navigate between text fields using the Return key
+---
+
+## Overview
+
+The IQKeyboardReturnManager subspec provides automatic return key handling, allowing users to navigate between text fields by pressing the Return key on the keyboard. The manager automatically changes the return key type to "Next" or "Done" based on the field's position in the form.
+
+<Note>
+  IQKeyboardReturnManager is now available as an independent library, similar to IQKeyboardToolbarManager.
+</Note>
+
+## Installation
+
+### CocoaPods
+
+```ruby Podfile
+# Include as part of IQKeyboardManagerSwift
+pod 'IQKeyboardManagerSwift'
+
+# Or include the specific subspec
+pod 'IQKeyboardManagerSwift/IQKeyboardReturnManager'
+
+# Or use the standalone library
+pod 'IQKeyboardReturnManager'
+```
+
+### Swift Package Manager
+
+The IQKeyboardReturnManager is included in the main package or can be added separately:
+```
+https://github.com/hackiftekhar/IQKeyboardManager.git
+```
+
+## How It Works
+
+The Return Key Manager automatically:
+
+1. **Detects text field order** in your form
+2. **Changes return key type** to "Next" for fields with a next field
+3. **Changes return key type** to "Done" for the last field
+4. **Handles return key taps** to move to the next field or dismiss keyboard
+5. **Works with UITextField and UITextView**
+
+## Basic Setup
+
+Return key handling works automatically once IQKeyboardManager is enabled:
+
+```swift AppDelegate.swift
+import IQKeyboardManagerSwift
+
+func application(_ application: UIApplication,
+                 didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    
+    // Enable keyboard management (return key handling is automatic)
+    IQKeyboardManager.shared.isEnabled = true
+    
+    return true
+}
+```
+
+<Tip>
+  No additional configuration is needed. Return key handling is enabled by default when IQKeyboardManager is active.
+</Tip>
+
+## Return Key Types
+
+The manager automatically sets appropriate return key types:
+
+<CardGroup cols={2}>
+  <Card title="Next" icon="arrow-right">
+    Used for fields that have a next text field in the form
+  </Card>
+  <Card title="Done" icon="check">
+    Used for the last text field to dismiss the keyboard
+  </Card>
+</CardGroup>
+
+## Navigation Flow
+
+```swift ViewController.swift
+import UIKit
+
+class RegistrationViewController: UIViewController {
+    
+    @IBOutlet weak var firstNameField: UITextField!  // Return key: Next
+    @IBOutlet weak var lastNameField: UITextField!   // Return key: Next
+    @IBOutlet weak var emailField: UITextField!      // Return key: Next
+    @IBOutlet weak var passwordField: UITextField!   // Return key: Done
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // Return keys are automatically configured!
+    }
+}
+```
+
+When the user:
+1. Taps Return on `firstNameField` → moves to `lastNameField`
+2. Taps Return on `lastNameField` → moves to `emailField`
+3. Taps Return on `emailField` → moves to `passwordField`
+4. Taps Return on `passwordField` → dismisses keyboard
+
+## Manual Return Key Control
+
+You can still manually set return key types when needed:
+
+```swift ViewController.swift
+class CustomFormViewController: UIViewController {
+    
+    @IBOutlet weak var searchField: UITextField!
+    @IBOutlet weak var notesField: UITextView!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Force specific return key types
+        searchField.returnKeyType = .search
+        notesField.returnKeyType = .default
+    }
+}
+```
+
+<Note>
+  Manually set return key types will be respected by IQKeyboardManager.
+</Note>
+
+## Custom Return Key Actions
+
+Implement UITextFieldDelegate to customize behavior:
+
+```swift ViewController.swift
+class LoginViewController: UIViewController, UITextFieldDelegate {
+    
+    @IBOutlet weak var usernameField: UITextField!
+    @IBOutlet weak var passwordField: UITextField!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        usernameField.delegate = self
+        passwordField.delegate = self
+    }
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        if textField == usernameField {
+            // Move to password field
+            passwordField.becomeFirstResponder()
+        } else if textField == passwordField {
+            // Validate and submit
+            view.endEditing(true)
+            performLogin()
+        }
+        return true
+    }
+    
+    func performLogin() {
+        // Handle login
+    }
+}
+```
+
+## UITextView Support
+
+For multi-line text views, the manager handles return keys intelligently:
+
+```swift ViewController.swift
+class FeedbackViewController: UIViewController {
+    
+    @IBOutlet weak var nameField: UITextField!       // Return key: Next
+    @IBOutlet weak var emailField: UITextField!      // Return key: Next  
+    @IBOutlet weak var feedbackTextView: UITextView! // Return key: Default (for line breaks)
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // UITextView allows line breaks by default
+        // To make it advance to next field:
+        feedbackTextView.returnKeyType = .next
+    }
+}
+```
+
+<Warning>
+  Setting `returnKeyType = .next` on a UITextView will make the Return key advance to the next field instead of inserting a line break.
+</Warning>
+
+## Handling Special Cases
+
+### Search Fields
+
+```swift ViewController.swift
+class SearchViewController: UIViewController, UITextFieldDelegate {
+    
+    @IBOutlet weak var searchField: UITextField!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        searchField.returnKeyType = .search
+        searchField.delegate = self
+    }
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        performSearch(query: textField.text ?? "")
+        textField.resignFirstResponder()
+        return true
+    }
+    
+    func performSearch(query: String) {
+        // Execute search
+    }
+}
+```
+
+### Submit Forms
+
+```swift ViewController.swift
+class ContactFormViewController: UIViewController, UITextFieldDelegate {
+    
+    @IBOutlet weak var nameField: UITextField!
+    @IBOutlet weak var emailField: UITextField!
+    @IBOutlet weak var messageField: UITextView!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Last field triggers submission
+        messageField.returnKeyType = .send
+    }
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        if textField == emailField {
+            messageField.becomeFirstResponder()
+        }
+        return true
+    }
+}
+```
+
+## Disable Return Key Handling
+
+If you want to disable automatic return key handling while keeping other IQKeyboardManager features:
+
+```swift AppDelegate.swift
+// IQKeyboardManager doesn't expose a specific disable flag for return key handling
+// Instead, set return key types manually or implement UITextFieldDelegate
+```
+
+<Tip>
+  The return key manager is lightweight and non-intrusive. It only changes return key types and doesn't interfere with custom UITextFieldDelegate implementations.
+</Tip>
+
+## Return Key vs Toolbar Navigation
+
+<CardGroup cols={2}>
+  <Card title="Return Key Navigation" icon="keyboard">
+    **Advantages:**
+    - Natural typing flow
+    - No additional UI
+    - Familiar to users
+    - Works great for short forms
+    
+    **Disadvantages:**
+    - Less discoverable
+    - No previous button
+    - Requires pressing return
+  </Card>
+  
+  <Card title="Toolbar Navigation" icon="wrench">
+    **Advantages:**
+    - Visible Previous/Next/Done buttons
+    - Can go back to previous fields
+    - More discoverable
+    - Better for long forms
+    
+    **Disadvantages:**
+    - Takes up space above keyboard
+    - Additional UI element
+  </Card>
+</CardGroup>
+
+<Tip>
+  You can use both return key handling and toolbar navigation together for maximum flexibility.
+</Tip>
+
+## Combined Example
+
+```swift CompleteFormViewController.swift
+import UIKit
+import IQKeyboardManagerSwift
+
+class CompleteFormViewController: UIViewController {
+    
+    @IBOutlet weak var firstNameField: UITextField!
+    @IBOutlet weak var lastNameField: UITextField!
+    @IBOutlet weak var emailField: UITextField!
+    @IBOutlet weak var phoneField: UITextField!
+    @IBOutlet weak var notesField: UITextView!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupForm()
+    }
+    
+    func setupForm() {
+        // Return keys are automatic, but you can customize:
+        phoneField.returnKeyType = .next
+        notesField.returnKeyType = .default // Allow line breaks
+        
+        // Enable toolbar for additional navigation
+        // IQKeyboardManager.shared.enableAutoToolbar = true
+    }
+}
+
+extension CompleteFormViewController: UITextFieldDelegate {
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        switch textField {
+        case firstNameField:
+            lastNameField.becomeFirstResponder()
+        case lastNameField:
+            emailField.becomeFirstResponder()
+        case emailField:
+            phoneField.becomeFirstResponder()
+        case phoneField:
+            notesField.becomeFirstResponder()
+        default:
+            textField.resignFirstResponder()
+        }
+        return true
+    }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Let the manager handle return keys automatically">
+    Unless you have specific requirements, let IQKeyboardManager automatically configure return key types. It's smart enough to handle most scenarios.
+  </Accordion>
+
+  <Accordion title="Use .search for search fields">
+    Set `returnKeyType = .search` for search fields to show the search icon instead of "Next" or "Done".
+  </Accordion>
+
+  <Accordion title="Consider UX for multi-line text views">
+    For fields that need line breaks (like comments or notes), use `.default` return key type. For single-line behavior, use `.next` or `.done`.
+  </Accordion>
+
+  <Accordion title="Test the flow">
+    Always test the complete navigation flow to ensure users can easily move through your form using the Return key.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Return key not advancing to next field">
+    - Verify IQKeyboardManager is enabled
+    - Check if you've implemented `textFieldShouldReturn` that returns `false`
+    - Ensure text fields are in the view hierarchy
+    - Check that next field is a valid text input view
+  </Accordion>
+
+  <Accordion title="Wrong return key type showing">
+    - Check if you've manually set `returnKeyType`
+    - Verify the field order in your view hierarchy
+    - Try reloading the keyboard: `textField.reloadInputViews()`
+  </Accordion>
+
+  <Accordion title="Return key dismissing keyboard unexpectedly">
+    - Check if the field is detected as the last field
+    - Verify all text fields are properly connected
+    - Ensure hidden fields are actually visible when needed
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Toolbar Management" icon="wrench" href="/guides/toolbar-management">
+    Add Previous/Next/Done buttons for additional navigation
+  </Card>
+  <Card title="Resign Keyboard" icon="hand" href="/guides/resign-keyboard">
+    Dismiss keyboard by tapping outside text fields
+  </Card>
+  <Card title="Advanced Configuration" icon="sliders" href="/guides/advanced-configuration">
+    Fine-tune keyboard behavior
+  </Card>
+  <Card title="Debugging" icon="bug" href="/guides/debugging">
+    Troubleshoot return key issues
+  </Card>
+</CardGroup>

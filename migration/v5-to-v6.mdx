@@ -1,0 +1,385 @@
+---
+title: Migration Guide v5 to v6
+description: Upgrade from IQKeyboardManager v5 to v6 with enhanced customization
+---
+
+## Overview
+
+Version 6.0 brings refined API naming, new customization options, and improved view hierarchy handling. The changes are relatively minimal compared to later versions, making this one of the smoother migrations.
+
+<Info>
+  This migration primarily involves updating a few method names and optionally adopting new features.
+</Info>
+
+## Breaking Changes
+
+### IQKeyboardManager Shared Instance
+
+The class method for accessing the shared instance has been simplified:
+
+<CodeGroup>
+```swift v5 Shared Instance
+let manager = IQKeyboardManager.sharedManager()
+```
+
+```swift v6 Shared Instance
+let manager = IQKeyboardManager.shared
+```
+</CodeGroup>
+
+<Note>
+  Both `sharedManager()` and `shared` may work in v6 due to backwards compatibility, but `shared` is the preferred API going forward.
+</Note>
+
+### UIView Extension Method Rename
+
+The method to get a view's containing view controller has been renamed for clarity:
+
+<CodeGroup>
+```swift v5 View Controller
+let controller = view.viewController()
+```
+
+```swift v6 View Controller
+let controller = view.viewContainingController()
+```
+</CodeGroup>
+
+## New Features in v6
+
+Version 6.0 introduces several new customization options:
+
+### Placeholder Color Customization
+
+You can now customize the color of toolbar placeholders:
+
+```swift
+import IQKeyboardManagerSwift
+
+func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    IQKeyboardManager.shared.enable = true
+    
+    // New in v6: Customize placeholder colors
+    IQKeyboardManager.shared.placeholderColor = .gray
+    IQKeyboardManager.shared.placeholderButtonColor = .systemBlue
+    
+    return true
+}
+```
+
+### Additional Safe Area Insets
+
+<Warning>
+  **Experimental Feature**: This feature was marked as experimental in v6 and was removed in v7.
+</Warning>
+
+```swift
+// Available in v6 only (removed in v7)
+IQKeyboardManager.shared.canAdjustAdditionalSafeAreaInsets = true
+```
+
+### UIView Customization Properties
+
+#### Ignore Next/Previous Switching
+
+Control whether specific text fields participate in the Previous/Next navigation:
+
+```swift
+// New in v6
+textField.ignoreSwitchingByNextPrevious = true
+```
+
+#### Resign on Touch Outside Mode
+
+Fine-grained control over dismiss-on-tap behavior per text field:
+
+```swift
+// New in v6
+textField.shouldResignOnTouchOutsideMode = .enabled  // Always resign
+textField.shouldResignOnTouchOutsideMode = .disabled // Never resign
+textField.shouldResignOnTouchOutsideMode = .default  // Use global setting
+```
+
+#### Parent Container View Controller
+
+New helper method to get the parent container view controller:
+
+```swift
+// New in v6
+if let container = textField.parentContainerViewController() {
+    print("Container: \(container)")
+}
+```
+
+## Migration Steps
+
+<Steps>
+  <Step title="Update Dependency">
+    Update your `Podfile` or `Package.swift` to version 6.0+
+    
+    ```ruby
+    # CocoaPods
+    pod 'IQKeyboardManagerSwift', '~> 6.0'
+    ```
+    
+    ```swift
+    // Swift Package Manager
+    .package(url: "https://github.com/hackiftekhar/IQKeyboardManager.git", from: "6.0.0")
+    ```
+  </Step>
+  
+  <Step title="Install Dependencies">
+    ```bash
+    # CocoaPods
+    pod install
+    
+    # Swift Package Manager
+    # File > Packages > Update to Latest Package Versions
+    ```
+  </Step>
+  
+  <Step title="Update Shared Instance Access">
+    Replace `sharedManager()` with `shared`:
+    
+    ```swift
+    // Before
+    IQKeyboardManager.sharedManager().enable = true
+    
+    // After
+    IQKeyboardManager.shared.enable = true
+    ```
+    
+    <Tip>
+      Use find-and-replace to update all instances:
+      - Find: `IQKeyboardManager.sharedManager()`
+      - Replace: `IQKeyboardManager.shared`
+    </Tip>
+  </Step>
+  
+  <Step title="Update View Controller Method">
+    Replace `viewController()` with `viewContainingController()`:
+    
+    ```swift
+    // Before
+    let controller = view.viewController()
+    
+    // After
+    let controller = view.viewContainingController()
+    ```
+  </Step>
+  
+  <Step title="Build and Test">
+    - Build your project
+    - Test keyboard behavior
+    - Verify no deprecation warnings appear
+  </Step>
+  
+  <Step title="Adopt New Features (Optional)">
+    Consider using new v6 features:
+    
+    ```swift
+    // Customize placeholder appearance
+    IQKeyboardManager.shared.placeholderColor = .secondaryLabel
+    IQKeyboardManager.shared.placeholderButtonColor = .systemBlue
+    
+    // Fine-tune specific text fields
+    passwordTextField.ignoreSwitchingByNextPrevious = true
+    searchField.shouldResignOnTouchOutsideMode = .enabled
+    ```
+  </Step>
+</Steps>
+
+## Complete Migration Example
+
+<CodeGroup>
+```swift v5 Code
+import IQKeyboardManagerSwift
+
+class AppDelegate: UIResponder, UIApplicationDelegate {
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        
+        // Configure keyboard manager
+        let manager = IQKeyboardManager.sharedManager()
+        manager.enable = true
+        manager.enableAutoToolbar = true
+        manager.shouldResignOnTouchOutside = true
+        
+        return true
+    }
+}
+
+class MyViewController: UIViewController {
+    @IBOutlet weak var myView: UIView!
+    
+    func findViewController() {
+        if let controller = myView.viewController() {
+            print("Found: \(controller)")
+        }
+    }
+}
+```
+
+```swift v6 Code
+import IQKeyboardManagerSwift
+
+class AppDelegate: UIResponder, UIApplicationDelegate {
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        
+        // Configure keyboard manager
+        let manager = IQKeyboardManager.shared // [!code ++]
+        manager.enable = true
+        manager.enableAutoToolbar = true
+        manager.shouldResignOnTouchOutside = true
+        
+        // New v6 features
+        manager.placeholderColor = .gray // [!code ++]
+        manager.placeholderButtonColor = .systemBlue // [!code ++]
+        
+        return true
+    }
+}
+
+class MyViewController: UIViewController {
+    @IBOutlet weak var myView: UIView!
+    
+    func findViewController() {
+        if let controller = myView.viewContainingController() { // [!code ++]
+            print("Found: \(controller)")
+        }
+    }
+}
+```
+</CodeGroup>
+
+## Per-Field Customization Example
+
+One of the powerful new features in v6 is per-field customization:
+
+```swift
+class LoginViewController: UIViewController {
+    @IBOutlet weak var emailTextField: UITextField!
+    @IBOutlet weak var passwordTextField: UITextField!
+    @IBOutlet weak var confirmPasswordTextField: UITextField!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Password field shouldn't be navigable via Previous/Next
+        passwordTextField.ignoreSwitchingByNextPrevious = true
+        confirmPasswordTextField.ignoreSwitchingByNextPrevious = true
+        
+        // Email field always dismisses keyboard when tapping outside,
+        // even if global setting is disabled
+        emailTextField.shouldResignOnTouchOutsideMode = .enabled
+    }
+}
+```
+
+## Benefits of v6
+
+<CardGroup cols={2}>
+  <Card title="Cleaner API" icon="sparkles">
+    Simplified shared instance access with `shared` property
+  </Card>
+  <Card title="Better Naming" icon="tag">
+    More descriptive method names like `viewContainingController()`
+  </Card>
+  <Card title="Enhanced Customization" icon="palette">
+    New placeholder color options for better theming
+  </Card>
+  <Card title="Granular Control" icon="sliders">
+    Per-field customization options for complex forms
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="'sharedManager()' is deprecated">
+    **Solution**: Replace with `shared`:
+    ```swift
+    // Old
+    IQKeyboardManager.sharedManager()
+    
+    // New
+    IQKeyboardManager.shared
+    ```
+  </Accordion>
+  
+  <Accordion title="'viewController()' method not found">
+    **Solution**: Use `viewContainingController()` instead:
+    ```swift
+    // Old
+    view.viewController()
+    
+    // New
+    view.viewContainingController()
+    ```
+  </Accordion>
+  
+  <Accordion title="Placeholder colors not changing">
+    **Check**: Ensure you have `shouldShowToolbarPlaceholder` enabled:
+    ```swift
+    IQKeyboardManager.shared.shouldShowToolbarPlaceholder = true
+    IQKeyboardManager.shared.placeholderColor = .gray
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Deprecation Warnings
+
+If you see deprecation warnings in v6, they're likely for features that will be removed in v7:
+
+<Warning>
+  Features marked as deprecated in v6:
+  - `canAdjustAdditionalSafeAreaInsets` (removed in v7)
+  - `preventShowingBottomBlankSpace` (removed in v7)
+  - `shouldFixInteractivePopGestureRecognizer` (removed in v7)
+</Warning>
+
+If you're using these features, consider alternatives before upgrading to v7.
+
+## Compatibility Notes
+
+### iOS Version Support
+
+Version 6.0 dropped support for older iOS versions. Ensure your deployment target meets the minimum requirement:
+
+```ruby
+# Podfile
+platform :ios, '13.0'  # Check the exact minimum in release notes
+```
+
+### Swift Version
+
+Version 6.0 requires Swift 5.0 or later. Ensure your project uses a compatible Swift version.
+
+## Next Steps
+
+After successfully migrating to v6:
+
+<Steps>
+  <Step title="Explore New Features">
+    Try out the new customization options like `placeholderColor` and `placeholderButtonColor`
+  </Step>
+  
+  <Step title="Refine Per-Field Behavior">
+    Use `ignoreSwitchingByNextPrevious` and `shouldResignOnTouchOutsideMode` for better UX
+  </Step>
+  
+  <Step title="Plan for v7">
+    If you eventually plan to upgrade to v7, review the [v6 to v7 migration guide](/migration/v6-to-v7) to understand upcoming changes
+  </Step>
+</Steps>
+
+## Need Help?
+
+If you encounter issues:
+
+1. Check [GitHub Issues](https://github.com/hackiftekhar/IQKeyboardManager/issues)
+2. Review the [v6 release notes](https://github.com/hackiftekhar/IQKeyboardManager/releases/tag/v6.0.0)
+3. Ask in [Stack Overflow](https://stackoverflow.com/questions/tagged/iqkeyboardmanager) with the `iqkeyboardmanager` tag
+
+<Info>
+  **Simple Migration**: The v5 to v6 migration is one of the simplest in IQKeyboardManager's history. Most apps can complete it in under 30 minutes.
+</Info>

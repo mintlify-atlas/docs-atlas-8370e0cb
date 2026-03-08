@@ -1,0 +1,316 @@
+---
+title: Toolbar Management
+description: Add Previous/Next/Done buttons to navigate between text fields
+---
+
+## Overview
+
+The IQKeyboardToolbarManager subspec provides an automatic toolbar above the keyboard with Previous/Next/Done buttons, allowing users to navigate between text fields without dismissing the keyboard.
+
+<Note>
+  As of version 7.0+, IQKeyboardToolbarManager is now available as an independent library. The integration with IQKeyboardManager is deprecated but still functional.
+</Note>
+
+## Installation
+
+### CocoaPods
+
+```ruby Podfile
+# Option 1: Include as part of IQKeyboardManagerSwift
+pod 'IQKeyboardManagerSwift'
+
+# Option 2: Use the standalone library (recommended)
+pod 'IQKeyboardToolbarManager'
+```
+
+### Swift Package Manager
+
+Add the IQKeyboardToolbarManager package separately:
+```
+https://github.com/hackiftekhar/IQKeyboardToolbarManager
+```
+
+## Basic Setup
+
+<Steps>
+  <Step title="Import the library">
+    ```swift AppDelegate.swift
+    import IQKeyboardManagerSwift
+    ```
+  </Step>
+
+  <Step title="Enable auto toolbar">
+    ```swift AppDelegate.swift
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        
+        // Enable keyboard management
+        IQKeyboardManager.shared.isEnabled = true
+        
+        // Enable automatic toolbar
+        IQKeyboardManager.shared.enableAutoToolbar = true
+        
+        return true
+    }
+    ```
+  </Step>
+
+  <Step title="Test the toolbar">
+    Run your app and tap on a text field. You should see a toolbar with Previous/Next/Done buttons above the keyboard.
+  </Step>
+</Steps>
+
+<Warning>
+  The toolbar integration via `IQKeyboardManager.shared.enableAutoToolbar` is deprecated. Consider using IQKeyboardToolbarManager independently for new projects.
+</Warning>
+
+## Toolbar Configuration
+
+Access toolbar configuration through the `toolbarConfiguration` property:
+
+```swift AppDelegate.swift
+let config = IQKeyboardManager.shared.toolbarConfiguration
+
+// Customize toolbar appearance and behavior
+config.tintColor = .systemBlue
+config.barTintColor = .systemGray6
+```
+
+## Navigation Methods
+
+### Programmatic Navigation
+
+Navigate between text fields programmatically:
+
+```swift ViewController.swift
+import IQKeyboardManagerSwift
+
+class FormViewController: UIViewController {
+    
+    @IBAction func moveToNextField() {
+        // Move to next text field
+        if IQKeyboardManager.shared.canGoNext {
+            IQKeyboardManager.shared.goNext()
+        }
+    }
+    
+    @IBAction func moveToPreviousField() {
+        // Move to previous text field
+        if IQKeyboardManager.shared.canGoPrevious {
+            IQKeyboardManager.shared.goPrevious()
+        }
+    }
+    
+    @IBAction func updateToolbar() {
+        // Reload toolbar button states
+        IQKeyboardManager.shared.reloadInputViews()
+    }
+}
+```
+
+### Check Navigation Availability
+
+```swift ViewController.swift
+if IQKeyboardManager.shared.canGoNext {
+    print("Can navigate to next field")
+}
+
+if IQKeyboardManager.shared.canGoPrevious {
+    print("Can navigate to previous field")
+}
+```
+
+## Class-Level Control
+
+### Disable Toolbar for Specific View Controllers
+
+```swift AppDelegate.swift
+// Disable toolbar for specific view controllers
+IQKeyboardManager.shared.disabledToolbarClasses.append(LoginViewController.self)
+
+// Disable for multiple view controllers
+IQKeyboardManager.shared.disabledToolbarClasses += [
+    LoginViewController.self,
+    ChatViewController.self
+]
+```
+
+### Force Enable for Specific Classes
+
+```swift AppDelegate.swift
+// Force enable toolbar for specific view controllers
+IQKeyboardManager.shared.enabledToolbarClasses.append(FormViewController.self)
+```
+
+<Warning>
+  If a class appears in both `disabledToolbarClasses` and `enabledToolbarClasses`, the disabled list takes precedence.
+</Warning>
+
+## Sound Effects
+
+Enable input click sounds when toolbar buttons are tapped:
+
+```swift AppDelegate.swift
+IQKeyboardManager.shared.playInputClicks = true
+```
+
+## Deep Responder Navigation
+
+Allow navigation between text fields in different container views:
+
+```swift AppDelegate.swift
+// Allow navigation between text fields in custom container views
+IQKeyboardManager.shared.deepResponderAllowedContainerClasses = [
+    UIView.self,
+    UIStackView.self,
+    CustomContainerView.self
+]
+```
+
+<Tip>
+  This is useful when you have text fields organized in stack views, scroll views, or custom container views.
+</Tip>
+
+## Toolbar Debugging
+
+Enable debug logging for toolbar operations:
+
+```swift AppDelegate.swift
+IQKeyboardManager.shared.enableToolbarDebugging = true
+```
+
+## Example: Custom Form with Toolbar
+
+```swift FormViewController.swift
+import UIKit
+import IQKeyboardManagerSwift
+
+class RegistrationFormViewController: UIViewController {
+    
+    @IBOutlet weak var firstNameField: UITextField!
+    @IBOutlet weak var lastNameField: UITextField!
+    @IBOutlet weak var emailField: UITextField!
+    @IBOutlet weak var phoneField: UITextField!
+    @IBOutlet weak var addressField: UITextView!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupToolbar()
+    }
+    
+    func setupToolbar() {
+        // Toolbar is automatically added to all text fields
+        // Configure appearance if needed
+        let config = IQKeyboardManager.shared.toolbarConfiguration
+        config.tintColor = .systemBlue
+    }
+    
+    @IBAction func submitForm(_ sender: UIButton) {
+        // Move to next field or submit
+        if IQKeyboardManager.shared.canGoNext {
+            IQKeyboardManager.shared.goNext()
+        } else {
+            // Last field - submit form
+            view.endEditing(true)
+            submitFormData()
+        }
+    }
+    
+    func submitFormData() {
+        // Process form submission
+    }
+}
+```
+
+## Toolbar Behavior
+
+The toolbar automatically:
+
+1. **Shows Previous button** when there's a previous text field
+2. **Shows Next button** when there's a next text field
+3. **Disables buttons** when navigation is not possible
+4. **Shows Done button** to dismiss the keyboard
+5. **Updates state** when text fields change
+
+## Customizing Button Behavior
+
+While the toolbar is automatic, you can customize button actions by:
+
+1. Using the standalone IQKeyboardToolbarManager library
+2. Implementing custom toolbar with `inputAccessoryView`
+3. Handling return key navigation (see [Return Key Handling](/guides/return-key-handling))
+
+## Toolbar vs Return Key Navigation
+
+<CardGroup cols={2}>
+  <Card title="Toolbar Navigation" icon="wrench">
+    - Visible Previous/Next/Done buttons
+    - User taps buttons to navigate
+    - Keyboard stays visible
+    - Better for long forms
+  </Card>
+  <Card title="Return Key Navigation" icon="keyboard">
+    - Uses Return key to advance
+    - More natural typing flow
+    - Automatically changes return key type
+    - Better for short forms
+  </Card>
+</CardGroup>
+
+<Tip>
+  You can enable both toolbar and return key navigation for maximum flexibility.
+</Tip>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Toolbar not appearing">
+    - Verify `enableAutoToolbar` is set to `true`
+    - Check if the view controller is in `disabledToolbarClasses`
+    - Ensure you're using UITextField or UITextView
+    - Enable toolbar debugging: `IQKeyboardManager.shared.enableToolbarDebugging = true`
+  </Accordion>
+
+  <Accordion title="Previous/Next buttons not working">
+    - Use `reloadInputViews()` after dynamically adding/removing text fields
+    - Check `deepResponderAllowedContainerClasses` if fields are in custom containers
+    - Verify text fields are in the view hierarchy when keyboard appears
+  </Accordion>
+
+  <Accordion title="Toolbar appearance issues">
+    - Configure `toolbarConfiguration` in AppDelegate
+    - Check for conflicts with custom `inputAccessoryView`
+    - Verify tint colors are visible against toolbar background
+  </Accordion>
+</AccordionGroup>
+
+## Migration to Standalone Library
+
+If you're migrating to the standalone IQKeyboardToolbarManager:
+
+```swift AppDelegate.swift
+// Old way (deprecated)
+IQKeyboardManager.shared.enableAutoToolbar = true
+
+// New way (recommended)
+import IQKeyboardToolbarManager
+
+IQKeyboardToolbarManager.shared.isEnabled = true
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Return Key Handling" icon="keyboard" href="/guides/return-key-handling">
+    Navigate using the Return key
+  </Card>
+  <Card title="Appearance Customization" icon="palette" href="/guides/appearance-customization">
+    Customize keyboard appearance
+  </Card>
+  <Card title="Advanced Configuration" icon="sliders" href="/guides/advanced-configuration">
+    Fine-tune keyboard behavior
+  </Card>
+  <Card title="Debugging" icon="bug" href="/guides/debugging">
+    Troubleshoot toolbar issues
+  </Card>
+</CardGroup>

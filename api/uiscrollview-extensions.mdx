@@ -1,0 +1,228 @@
+---
+title: 'UIScrollView Extensions'
+description: 'Scroll view specific keyboard adjustment controls'
+---
+
+## Overview
+
+The UIScrollView extensions provide fine-grained control over how scroll views behave when the keyboard appears. These extensions allow you to customize scrolling behavior and content inset adjustments on a per-scrollview basis.
+
+All properties are accessed through the `.iq` namespace:
+
+```swift
+scrollView.iq.ignoreScrollingAdjustment = true
+tableView.iq.restoreContentOffset = true
+```
+
+## Properties
+
+<ParamField path="ignoreScrollingAdjustment" type="Bool" default="false">
+  If `true`, the scrollview will ignore scrolling adjustments for positioning text input views.
+  
+  When enabled, IQKeyboardManager will not automatically scroll this scroll view to make the active text field visible. The scroll view will remain at its current position.
+  
+  **Use when:**
+  - You want to handle scrolling manually
+  - The scroll view has custom scrolling behavior
+  - You don't want automatic scrolling for specific scroll views
+  
+  ```swift
+  // Disable automatic scrolling for this scroll view
+  scrollView.iq.ignoreScrollingAdjustment = true
+  ```
+</ParamField>
+
+<ParamField path="ignoreContentInsetAdjustment" type="Bool" default="false">
+  If `true`, the scrollview will ignore content inset adjustments when the keyboard is shown.
+  
+  When enabled, IQKeyboardManager will not modify the `contentInset` of this scroll view when the keyboard appears or disappears.
+  
+  **Use when:**
+  - You manage content insets manually
+  - The scroll view has custom inset behavior (e.g., for navigation bars)
+  - You want to prevent conflicts with other inset adjustments
+  
+  ```swift
+  // Prevent automatic content inset adjustments
+  tableView.iq.ignoreContentInsetAdjustment = true
+  ```
+</ParamField>
+
+<ParamField path="restoreContentOffset" type="Bool" default="false">
+  If `true`, the scroll view's `contentOffset` will be restored to its initial position when the keyboard is dismissed.
+  
+  This ensures that the scroll view returns to exactly where it was before the keyboard appeared, rather than staying at the adjusted position.
+  
+  **Use when:**
+  - You want the scroll view to return to its original position
+  - You're implementing forms where the user should see the top after editing
+  - You need consistent scroll position before and after keyboard interaction
+  
+  ```swift
+  // Restore original scroll position when keyboard dismisses
+  scrollView.iq.restoreContentOffset = true
+  ```
+</ParamField>
+
+## Available Properties Summary
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `ignoreScrollingAdjustment` | `Bool` | `false` | Prevents automatic scrolling to visible |
+| `ignoreContentInsetAdjustment` | `Bool` | `false` | Prevents content inset modifications |
+| `restoreContentOffset` | `Bool` | `false` | Restores scroll position on dismiss |
+
+## Usage Examples
+
+### Custom Scrolling with Manual Control
+
+```swift
+class CustomScrollViewController: UIViewController {
+    @IBOutlet weak var scrollView: UIScrollView!
+    @IBOutlet weak var textField: UITextField!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Disable automatic scrolling, we'll handle it manually
+        scrollView.iq.ignoreScrollingAdjustment = true
+        
+        // Listen for keyboard notifications
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillShow),
+            name: UIResponder.keyboardWillShowNotification,
+            object: nil
+        )
+    }
+    
+    @objc func keyboardWillShow(_ notification: Notification) {
+        // Implement custom scrolling logic here
+    }
+}
+```
+
+### TableView with Custom Insets
+
+```swift
+class TableViewController: UITableViewController {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // We manage our own insets for navigation bar and tab bar
+        tableView.iq.ignoreContentInsetAdjustment = true
+        
+        // Set custom insets
+        tableView.contentInset = UIEdgeInsets(
+            top: navigationBarHeight,
+            left: 0,
+            bottom: tabBarHeight,
+            right: 0
+        )
+    }
+}
+```
+
+### Form with Reset on Keyboard Dismiss
+
+```swift
+class FormViewController: UIViewController {
+    @IBOutlet weak var scrollView: UIScrollView!
+    @IBOutlet weak var nameField: UITextField!
+    @IBOutlet weak var emailField: UITextField!
+    @IBOutlet weak var messageField: UITextView!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Return to top of form when keyboard dismisses
+        scrollView.iq.restoreContentOffset = true
+        
+        // This ensures users see the entire form after editing
+    }
+}
+```
+
+### Complex Layout with Mixed Behavior
+
+```swift
+class ComplexFormViewController: UIViewController {
+    @IBOutlet weak var mainScrollView: UIScrollView!
+    @IBOutlet weak var nestedTableView: UITableView!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Main scroll view: auto-scroll but don't change insets
+        mainScrollView.iq.ignoreContentInsetAdjustment = true
+        mainScrollView.iq.restoreContentOffset = false
+        
+        // Nested table: ignore all automatic adjustments
+        nestedTableView.iq.ignoreScrollingAdjustment = true
+        nestedTableView.iq.ignoreContentInsetAdjustment = true
+    }
+}
+```
+
+### Scroll View with Fixed Header
+
+```swift
+class HeaderScrollViewController: UIViewController {
+    @IBOutlet weak var scrollView: UIScrollView!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Don't restore offset - allow users to continue from where they were
+        scrollView.iq.restoreContentOffset = false
+        
+        // But do allow automatic scrolling to make fields visible
+        scrollView.iq.ignoreScrollingAdjustment = false
+    }
+}
+```
+
+## When to Use Each Property
+
+### `ignoreScrollingAdjustment`
+
+**Use this when:**
+- Implementing custom keyboard avoidance logic
+- Working with complex nested scroll views
+- The default scrolling behavior conflicts with your UI design
+- You want scroll views to stay exactly where they are
+
+**Don't use when:**
+- You want the standard behavior of scrolling to make text fields visible
+- You don't have specific scrolling requirements
+
+### `ignoreContentInsetAdjustment`
+
+**Use this when:**
+- Managing `contentInset` manually for navigation/tab bars
+- Using custom inset animations
+- The scroll view has fixed content that shouldn't shift
+- Experiencing inset conflicts with other libraries
+
+**Don't use when:**
+- You want IQKeyboardManager to handle all inset adjustments
+- Your scroll view has standard behavior
+
+### `restoreContentOffset`
+
+**Use this when:**
+- Building forms that should reset to the top
+- Creating wizards or multi-step input flows
+- Users should always see the full content after editing
+- Implementing "return to start" UX patterns
+
+**Don't use when:**
+- Users should continue from where they left off
+- You want to preserve scroll position during editing sessions
+- Working with long lists where returning to top is disruptive
+
+## See Also
+
+- [UIView Extensions](/api/uiview-extensions) - General view extensions
+- [Configuration](/core/configuration) - Global keyboard manager settings
+- [Toolbar Configuration](/guides/toolbar-management) - Toolbar customization

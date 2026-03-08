@@ -1,0 +1,296 @@
+---
+title: 'IQRootControllerConfiguration'
+description: 'Internal struct that tracks root view controller layout state for restoration'
+icon: 'window-restore'
+---
+
+## Overview
+
+`IQRootControllerConfiguration` is an internal struct that captures and maintains the layout state of the root view controller containing an active text input view. It records the initial state when a text input becomes active and provides methods to detect changes and restore the original layout.
+
+<Warning>
+  This is an internal struct and is not part of the public API. The documentation is provided for understanding the library's architecture.
+</Warning>
+
+## Purpose
+
+The root controller configuration:
+- Captures the initial frame origin of the root view controller's view
+- Records the initial safe area insets
+- Tracks the device orientation when the text input became active
+- Detects whether the view has been moved by keyboard adjustments
+- Provides restoration functionality to return views to their original position
+- Monitors interactive pop gestures that might affect view positioning
+
+## Properties
+
+### rootController
+
+```swift
+weak var rootController: UIViewController?
+```
+
+<ParamField path="rootController" type="UIViewController?">
+  A weak reference to the root view controller containing the active text input view. This is stored weakly to avoid retain cycles.
+</ParamField>
+
+### beginOrigin
+
+```swift
+let beginOrigin: CGPoint
+```
+
+<ParamField path="beginOrigin" type="CGPoint">
+  The original frame origin of the root controller's view when the text input became active. This value is captured during initialization and used for restoration.
+  
+  ```swift
+  // Captured from:
+  rootController.view.frame.origin
+  ```
+</ParamField>
+
+### beginSafeAreaInsets
+
+```swift
+let beginSafeAreaInsets: UIEdgeInsets
+```
+
+<ParamField path="beginSafeAreaInsets" type="UIEdgeInsets">
+  The initial safe area insets of the root controller's view. Stored for reference during layout calculations.
+  
+  ```swift
+  // Captured from:
+  rootController.view.safeAreaInsets
+  ```
+</ParamField>
+
+### beginOrientation
+
+```swift
+let beginOrientation: UIInterfaceOrientation
+```
+
+<ParamField path="beginOrientation" type="UIInterfaceOrientation">
+  The device interface orientation when the configuration was created. Used to detect orientation changes that require configuration updates.
+  
+  **Possible values:**
+  - `.portrait`
+  - `.portraitUpsideDown`
+  - `.landscapeLeft`
+  - `.landscapeRight`
+  - `.unknown`
+</ParamField>
+
+### currentOrientation
+
+```swift
+var currentOrientation: UIInterfaceOrientation { get }
+```
+
+<ResponseField name="currentOrientation" type="UIInterfaceOrientation">
+  The current device interface orientation. This computed property queries the window scene to determine the current orientation.
+  
+  ```swift
+  // Determined from:
+  rootController?.view.window?.windowScene.interfaceOrientation
+  ```
+</ResponseField>
+
+### isReady
+
+```swift
+var isReady: Bool { get }
+```
+
+<ResponseField name="isReady" type="Bool">
+  Indicates whether the root controller's view is in a window and ready for adjustments.
+  
+  Returns `true` when `rootController?.view.window != nil`, ensuring the view is part of the active view hierarchy.
+</ResponseField>
+
+### hasChanged
+
+```swift
+var hasChanged: Bool { get }
+```
+
+<ResponseField name="hasChanged" type="Bool">
+  Indicates whether the root controller's view origin has been moved from its initial position.
+  
+  Returns `true` when the current frame origin doesn't match `beginOrigin`, signaling that keyboard adjustments have been applied.
+  
+  ```swift
+  // Implementation:
+  let origin = rootController?.view.frame.origin ?? .zero
+  return !origin.equalTo(beginOrigin)
+  ```
+</ResponseField>
+
+### isInteractiveGestureActive
+
+```swift
+var isInteractiveGestureActive: Bool { get }
+```
+
+<ResponseField name="isInteractiveGestureActive" type="Bool">
+  Indicates whether an interactive pop gesture (swipe to go back) is currently active.
+  
+  Returns `true` when the navigation controller's `interactivePopGestureRecognizer` is in the `.began` or `.changed` state.
+  
+  **Why this matters:**
+  Interactive pop gestures manipulate view controller frames, which can conflict with keyboard adjustments. The configuration monitors this state to avoid premature restoration during gesture interactions.
+</ResponseField>
+
+## Initialization
+
+```swift
+init(rootController: UIViewController)
+```
+
+Creates a new configuration by capturing the current state of the provided view controller.
+
+**Example:**
+```swift
+let config = IQRootControllerConfiguration(rootController: viewController)
+// config.beginOrigin contains the current frame origin
+// config.beginOrientation contains the current orientation
+// config.beginSafeAreaInsets contains the current safe area insets
+```
+
+## Methods
+
+### restore()
+
+Restores the root controller's view to its original frame origin.
+
+```swift
+@discardableResult
+func restore() -> Bool
+```
+
+<ResponseField name="return" type="Bool">
+  Returns `true` if the frame was changed (restoration occurred), `false` if the frame was already at the original position or the root controller is `nil`.
+</ResponseField>
+
+**Implementation:**
+```swift
+func restore() -> Bool {
+    guard let rootController = rootController,
+          !rootController.view.frame.origin.equalTo(beginOrigin) else {
+        return false
+    }
+    
+    var rect = rootController.view.frame
+    rect.origin = beginOrigin
+    rootController.view.frame = rect
+    
+    return true
+}
+```
+
+**Usage:**
+```swift
+// Restore the view when keyboard is dismissed
+if configuration.hasChanged {
+    configuration.restore()
+}
+```
+
+## Lifecycle
+
+### When Configuration is Created
+
+A new `IQRootControllerConfiguration` is created when:
+1. A text input view becomes active (begins editing)
+2. The keyboard appears or changes
+3. The orientation changes while a text input is active
+
+### When Configuration is Updated
+
+The configuration is replaced with a new instance when:
+- The active text input's root controller changes (e.g., navigation to a new screen)
+- The device orientation changes from portrait to landscape or vice versa
+- A new text input in a different view controller becomes active
+
+### When Configuration is Restored
+
+The `restore()` method is called when:
+- The keyboard is dismissed
+- A text input resigns first responder
+- The keyboard manager is disabled
+- An orientation change completes
+- An interactive pop gesture completes successfully
+
+## Orientation Handling
+
+The configuration includes special logic for orientation changes:
+
+```swift
+// Check if orientation has changed
+if beginOrientation != currentOrientation {
+    // Handle orientation-specific logic
+}
+
+// Check if orientation category has changed (portrait ↔ landscape)
+let beginIsPortrait = beginOrientation.isPortrait
+let currentIsPortrait = currentOrientation.isPortrait
+if beginIsPortrait != currentIsPortrait {
+    // Create new configuration for orientation category change
+}
+```
+
+This ensures that layout adjustments are recalculated when switching between portrait and landscape modes.
+
+## Interactive Gesture Handling
+
+<Info>
+  The configuration plays a crucial role in handling interactive navigation gestures. During a swipe-to-go-back gesture, the view frames are manipulated, but the keyboard adjustment should only be reverted if the gesture completes (not if it's cancelled).
+</Info>
+
+The `isInteractiveGestureActive` property helps coordinate this:
+
+```swift
+if configuration.isInteractiveGestureActive {
+    // Delay restoration until gesture completes or cancels
+} else {
+    // Safe to restore immediately
+}
+```
+
+## Thread Safety
+
+<Info>
+  The struct is marked with `@MainActor`, ensuring all property access and method calls occur on the main thread. This is essential since it manipulates view frames and queries the view hierarchy.
+</Info>
+
+## Value Type Benefits
+
+Using a struct (value type) instead of a class provides important benefits:
+
+1. **Immutable State**: Once created, the `beginOrigin`, `beginSafeAreaInsets`, and `beginOrientation` cannot be changed
+2. **Simple Lifecycle**: No need to manage deinitialization or cleanup
+3. **Clear Ownership**: The struct is owned by `IQActiveConfiguration` with clear lifecycle boundaries
+
+## Usage in Active Configuration
+
+```swift
+// In IQActiveConfiguration
+var rootConfiguration: IQRootControllerConfiguration?
+
+// Create when text input becomes active
+let newConfiguration = IQRootControllerConfiguration(rootController: controller)
+
+// Restore when keyboard is dismissed
+if let config = rootConfiguration, config.hasChanged {
+    config.restore()
+}
+
+// Clear when no longer needed
+rootConfiguration = nil
+```
+
+## See Also
+
+- [IQActiveConfiguration](/api/active-configuration) - Owner of root controller configuration
+- [IQKeyboardManager](/api/iqkeyboardmanager) - Main keyboard manager class
+- [IQScrollViewConfiguration](/api/scroll-view-configuration) - Scroll view state tracking

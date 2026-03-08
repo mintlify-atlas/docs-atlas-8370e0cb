@@ -1,0 +1,323 @@
+---
+title: "IQKeyboardReturnManager"
+description: "Independent package for automatic return key handling and navigation"
+icon: "arrow-turn-down-left"
+---
+
+## Overview
+
+As of version 8.0, **IQKeyboardReturnManager** is now an independent package, separated from the main IQKeyboardManager library. It automatically handles return key behavior, allowing users to navigate between text fields by pressing the return key.
+
+<Info>
+  IQKeyboardReturnManager was previously named `IQReturnKeyHandler` and was part of IQKeyboardManager. It has been renamed and extracted into its own package.
+</Info>
+
+## GitHub Repository
+
+[hackiftekhar/IQKeyboardReturnManager](https://github.com/hackiftekhar/IQKeyboardReturnManager)
+
+## Key Features
+
+- **Automatic Return Key Handling** - Navigate to next field or dismiss keyboard on return key press
+- **Smart Navigation** - Automatically moves to next text field when pressing return
+- **Customizable Behavior** - Configure return key type per field (Next, Done, etc.)
+- **No Code Required** - Works automatically once enabled
+- **Delegate Pattern** - Optional delegate methods for custom behavior
+
+## Installation
+
+### CocoaPods
+
+```ruby
+# Install IQKeyboardReturnManager independently
+pod 'IQKeyboardReturnManager'
+
+# Or as a subspec of IQKeyboardManager for easier migration
+pod 'IQKeyboardManagerSwift/IQKeyboardReturnManager'
+```
+
+### Swift Package Manager
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/hackiftekhar/IQKeyboardReturnManager.git", from: "2.0.0")
+]
+```
+
+### Carthage
+
+```ogdl
+github "hackiftekhar/IQKeyboardReturnManager"
+```
+
+## Basic Usage
+
+### Enable Return Key Management
+
+```swift
+import IQKeyboardReturnManager
+
+class MyViewController: UIViewController {
+    
+    @IBOutlet var nameTextField: UITextField!
+    @IBOutlet var emailTextField: UITextField!
+    @IBOutlet var passwordTextField: UITextField!
+    
+    private lazy var returnKeyManager = IQKeyboardReturnManager(controller: self)
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Return key manager is automatically enabled when created
+        // It will handle return key presses in this view controller
+    }
+}
+```
+
+### How It Works
+
+1. When the user presses return on a text field:
+   - If there's a next text field, it becomes first responder
+   - If it's the last text field, the keyboard dismisses
+
+2. Return key types are automatically configured:
+   - "Next" for fields with a next field
+   - "Done" for the last field
+
+## Configuration
+
+### Custom Delegate
+
+Implement the delegate to customize behavior:
+
+```swift
+class MyViewController: UIViewController, IQKeyboardReturnManagerDelegate {
+    
+    private lazy var returnKeyManager: IQKeyboardReturnManager = {
+        let manager = IQKeyboardReturnManager(controller: self)
+        manager.delegate = self
+        return manager
+    }()
+    
+    // MARK: - IQKeyboardReturnManagerDelegate
+    
+    func shouldResignOnReturn(_ textInputView: UIView) -> Bool {
+        // Custom logic to determine if keyboard should dismiss
+        return true
+    }
+    
+    func didBeginEditing(_ textInputView: UIView) {
+        // Called when editing begins
+    }
+    
+    func didEndEditing(_ textInputView: UIView) {
+        // Called when editing ends
+    }
+}
+```
+
+### Manual Control
+
+```swift
+// Navigate to next text field programmatically
+returnKeyManager.goNext()
+
+// Navigate to previous text field
+returnKeyManager.goPrevious()
+
+// Dismiss keyboard
+returnKeyManager.resignFirstResponder()
+```
+
+## Migration from v7
+
+<Info>
+  See the [Migration Guide](/migration/overview) for detailed migration instructions from IQKeyboardManager v7 to v8.
+</Info>
+
+### Key Changes
+
+1. **Renamed** - `IQReturnKeyHandler` → `IQKeyboardReturnManager`
+2. **Separate Package** - Now available as an independent library
+3. **Initialization** - Requires view controller instance in initializer
+
+### Before (v7)
+
+```swift
+import IQKeyboardManagerSwift
+
+class MyViewController: UIViewController {
+    
+    private var returnKeyHandler: IQReturnKeyHandler?
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        returnKeyHandler = IQReturnKeyHandler(controller: self)
+    }
+}
+```
+
+### After (v8)
+
+```swift
+import IQKeyboardReturnManager
+
+class MyViewController: UIViewController {
+    
+    private lazy var returnKeyManager = IQKeyboardReturnManager(controller: self)
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // returnKeyManager is automatically active
+    }
+}
+```
+
+## Use Cases
+
+### Form Navigation
+
+Ideal for forms where users should navigate between fields using the return key:
+
+```swift
+class RegistrationViewController: UIViewController {
+    
+    @IBOutlet var firstNameField: UITextField!
+    @IBOutlet var lastNameField: UITextField!
+    @IBOutlet var emailField: UITextField!
+    @IBOutlet var phoneField: UITextField!
+    @IBOutlet var passwordField: UITextField!
+    
+    private lazy var returnKeyManager = IQKeyboardReturnManager(controller: self)
+    
+    // Return key will automatically navigate:
+    // firstName (Return) → lastName (Return) → email (Return) → phone (Return) → password (Done)
+}
+```
+
+### Custom Return Behavior
+
+```swift
+class LoginViewController: UIViewController, IQKeyboardReturnManagerDelegate {
+    
+    @IBOutlet var usernameField: UITextField!
+    @IBOutlet var passwordField: UITextField!
+    
+    private lazy var returnKeyManager: IQKeyboardReturnManager = {
+        let manager = IQKeyboardReturnManager(controller: self)
+        manager.delegate = self
+        return manager
+    }()
+    
+    func shouldResignOnReturn(_ textInputView: UIView) -> Bool {
+        if textInputView == passwordField {
+            // Trigger login when user presses return on password field
+            performLogin()
+            return true
+        }
+        return false
+    }
+    
+    func performLogin() {
+        // Handle login logic
+    }
+}
+```
+
+## API Reference
+
+### Initialization
+
+```swift
+init(controller: UIViewController)
+```
+
+Creates a return key manager for the specified view controller.
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `delegate` | `IQKeyboardReturnManagerDelegate?` | Delegate for custom behavior |
+
+### Methods
+
+| Method | Description |
+|--------|-------------|
+| `goNext()` | Move to next text field |
+| `goPrevious()` | Move to previous text field |
+| `resignFirstResponder()` | Dismiss keyboard |
+
+### Delegate Methods
+
+```swift
+protocol IQKeyboardReturnManagerDelegate: AnyObject {
+    
+    // Called to determine if keyboard should dismiss on return
+    func shouldResignOnReturn(_ textInputView: UIView) -> Bool
+    
+    // Called when text field begins editing
+    func didBeginEditing(_ textInputView: UIView)
+    
+    // Called when text field ends editing
+    func didEndEditing(_ textInputView: UIView)
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep Manager in Memory">
+    Store the `IQKeyboardReturnManager` instance as a property to keep it in memory throughout the view controller's lifetime.
+    
+    ```swift
+    private lazy var returnKeyManager = IQKeyboardReturnManager(controller: self)
+    ```
+  </Accordion>
+  
+  <Accordion title="One Manager Per View Controller">
+    Create one return key manager per view controller, not per text field.
+    
+    ```swift
+    // ✅ Correct - one manager for the view controller
+    class FormViewController: UIViewController {
+        private lazy var returnKeyManager = IQKeyboardReturnManager(controller: self)
+    }
+    
+    // ❌ Incorrect - don't create multiple managers
+    class FormViewController: UIViewController {
+        private lazy var manager1 = IQKeyboardReturnManager(controller: self)
+        private lazy var manager2 = IQKeyboardReturnManager(controller: self)
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Use with IQKeyboardManager">
+    IQKeyboardReturnManager works seamlessly with IQKeyboardManager. Use both together for complete keyboard handling:
+    
+    ```swift
+    // In AppDelegate
+    IQKeyboardManager.shared.isEnabled = true
+    
+    // In ViewController
+    private lazy var returnKeyManager = IQKeyboardReturnManager(controller: self)
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="IQKeyboardToolbarManager" icon="wrench" href="/api/toolbar-manager">
+    Add Previous/Next/Done toolbar buttons
+  </Card>
+  <Card title="IQTextView" icon="text" href="/api/textview">
+    UITextView with placeholder support
+  </Card>
+</CardGroup>
+
+## See Also
+
+- [Getting Started](/introduction)
+- [Migration Guide](/migration/overview)
+- [GitHub Repository](https://github.com/hackiftekhar/IQKeyboardReturnManager)

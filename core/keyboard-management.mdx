@@ -1,0 +1,387 @@
+---
+title: 'Keyboard Management'
+description: 'Understanding how IQKeyboardManager handles keyboard interactions internally'
+---
+
+## Overview
+
+IQKeyboardManager uses a sophisticated notification-based system to automatically adjust your UI when the keyboard appears. It monitors keyboard and text input notifications, calculates the required adjustments, and manipulates the view hierarchy to keep text fields visible.
+
+## How It Works
+
+### Notification System
+
+IQKeyboardManager observes three key notification sources:
+
+1. **Keyboard Notifications** - Tracks keyboard show/hide/change events via `IQKeyboardNotification`
+2. **Text Input Notifications** - Monitors text field/text view focus changes via `IQTextInputViewNotification`  
+3. **Application State** - Responds to app becoming active to refresh adjustments
+
+```swift
+// Keyboard notifications are observed in IQActiveConfiguration
+keyboardObserver.subscribe(identifier: "IQActiveConfiguration", 
+                          changeHandler: { [weak self] _, endFrame in
+    // Triggers adjustPosition() or restorePosition()
+    self.sendEvent()
+})
+```
+
+### Active Configuration
+
+The `IQActiveConfiguration` class coordinates all keyboard management state:
+
+- **Current keyboard info** - Frame, animation duration, visibility
+- **Active text input view** - Which field is currently focused
+- **Root configuration** - View controller and initial layout state
+
+<Note>
+IQActiveConfiguration acts as the central coordinator, determining when to call `adjustPosition()` or `restorePosition()` based on keyboard and text input events.
+</Note>
+
+## Position Adjustment Logic
+
+When a text input becomes active and the keyboard shows, IQKeyboardManager follows this flow:
+
+### 1. Calculate Keyboard Size
+
+```swift
+// From IQKeyboardManager+Position.swift:275
+static func getKeyboardSize(keyboardDistance: CGFloat, 
+                           keyboardFrame: CGRect,
+                           safeAreaInsets: UIEdgeInsets, 
+                           windowFrame: CGRect) -> CGSize
+```
+
+The keyboard size is adjusted by:
+- Adding the configured `keyboardDistance`
+- Adding bottom safe area insets
+- Intersecting with window frame (handles hardware keyboards)
+
+### 2. Calculate Move Distance
+
+The library calculates how much to move the view upward:
+
+```swift
+// Calculates the minimum of:
+// 1. Distance from text field to top layout guide
+let topMovement = textInputViewRectInRootSuperview.minY - layoutGuide.top
+
+// 2. Distance text field needs to clear keyboard
+let bottomMovement = textInputViewRectInWindow.maxY - visibleHeight + layoutGuide.bottom
+
+var moveUp = CGFloat.minimum(topMovement, bottomMovement)
+```
+
+<Warning>
+The `moveUp` value is positive when the text field is hidden behind the keyboard, and negative when it's already visible.
+</Warning>
+
+### 3. Apply Adjustments
+
+IQKeyboardManager applies adjustments in order of priority:
+
+**ScrollView Content Offset** (if text field is in a scroll view)
+```swift
+// Adjusts contentOffset to scroll the text field into view
+scrollView.contentOffset = newContentOffset
+```
+
+**ScrollView Content Inset** (for bottom padding)
+```swift
+// Adds inset to account for keyboard
+var bottomInset = (kbSize.height) - (window.frame.height - lastScrollViewRect.maxY)
+lastScrollView.contentInset.bottom = bottomInset
+```
+
+**Root View Controller Frame** (as last resort)
+```swift
+// Moves the entire view controller upward
+rootViewOrigin.y = maximum(rootViewOrigin.y - moveUp, minimum(0, -originalKbSize.height))
+rootController.view.frame.origin = rootViewOrigin
+```
+
+## View Hierarchy Management
+
+### Finding the Root Controller
+
+IQKeyboardManager walks up the view hierarchy to find the root view controller:
+
+```swift
+// From UIView+Parent extensions
+func parentContainerViewController() -> UIViewController?
+```
+
+This respects:
+- Navigation controllers
+- Tab bar controllers  
+- Page view controllers
+- Modal presentations
+
+### ScrollView Handling
+
+The library has special logic for nested scroll views:
+
+1. **Walks hierarchy** to find the nearest scrollable parent
+2. **Stores original state** in `IQScrollViewConfiguration`
+3. **Adjusts content offset** to reveal the text field
+4. **Restores state** when keyboard dismisses
+
+```swift
+// IQScrollViewConfiguration stores:
+let startingContentOffset: CGPoint
+let startingScrollIndicatorInsets: UIEdgeInsets  
+let startingContentInset: UIEdgeInsets
+```
+
+### TableView & CollectionView
+
+For table and collection views, IQKeyboardManager:
+
+- Detects the cell containing the text field
+- Finds the previous cell's index path
+- Adjusts scroll offset to show the previous cell (for context)
+
+```swift
+if let tableCell = textInputView.iq.superviewOf(type: UITableViewCell.self),
+   let indexPath = tableView.indexPath(for: tableCell),
+   let previousIndexPath = tableView.previousIndexPath(of: indexPath) {
+    // Scroll to show previous cell
+}
+```
+
+## Distance Calculation
+
+### Global Distance
+
+Set the default distance for all text fields:
+
+```swift
+IQKeyboardManager.shared.keyboardDistance = 20.0
+```
+
+### Per-View Distance
+
+Override for specific text fields using the `.iq` extension:
+
+```swift
+textField.iq.distanceFromKeyboard = 50.0
+
+// Use default/global distance
+textField.iq.distanceFromKeyboard = UIView.defaultKeyboardDistance
+```
+
+<Accordion title="How distance priority works">
+The library checks distances in this order:
+
+1. **SearchBar distance** - If text field is in a UISearchBar
+2. **View-specific distance** - Set via `view.iq.distanceFromKeyboard`  
+3. **Global distance** - Fallback to `IQKeyboardManager.shared.keyboardDistance`
+
+```swift
+// From IQKeyboardManager+Position.swift:258
+func getSpecialTextInputViewDistance(textInputView: some IQTextInputView) -> CGFloat {
+    let specialKeyboardDistance: CGFloat
+    
+    if let searchBar = textInputView.iq.textFieldSearchBar() {
+        specialKeyboardDistance = searchBar.iq.distanceFromKeyboard
+    } else {
+        specialKeyboardDistance = textInputView.iq.distanceFromKeyboard
+    }
+    
+    if specialKeyboardDistance == UIView.defaultKeyboardDistance {
+        return keyboardDistance // Global setting
+    } else {
+        return specialKeyboardDistance
+    }
+}
+```
+</Accordion>
+
+## Enable/Disable Behavior
+
+### Global Enable/Disable
+
+```swift
+// Enable keyboard management
+IQKeyboardManager.shared.isEnabled = true
+
+// Disable keyboard management  
+IQKeyboardManager.shared.isEnabled = false
+```
+
+When disabled, IQKeyboardManager calls `restorePosition()` to reset all view adjustments.
+
+### Class-Level Control
+
+Disable keyboard management for specific view controller types:
+
+```swift
+// These classes are disabled by default
+IQKeyboardManager.shared.disabledDistanceHandlingClasses = [
+    UITableViewController.self,
+    UIInputViewController.self,
+    UIAlertController.self
+]
+
+// Force enable for specific classes
+IQKeyboardManager.shared.enabledDistanceHandlingClasses = [
+    MyCustomViewController.self
+]
+```
+
+<Note>
+If a class appears in both `disabledDistanceHandlingClasses` and `enabledDistanceHandlingClasses`, the disabled setting takes precedence.
+</Note>
+
+### Per-View Control
+
+Use the `.iq.enableMode` property for fine-grained control:
+
+```swift
+// Use global setting
+textField.iq.enableMode = .default
+
+// Always enable for this field
+textField.iq.enableMode = .enabled
+
+// Always disable for this field  
+textField.iq.enableMode = .disabled
+```
+
+## Per-View Customization
+
+All per-view customization uses the `.iq` namespace extension:
+
+```swift
+// Distance from keyboard
+myTextField.iq.distanceFromKeyboard = 30.0
+
+// Enable/disable
+myTextField.iq.enableMode = .disabled
+
+// Access parent view controller
+let controller = myTextField.iq.parentContainerViewController()
+
+// Find parent of specific type
+let scrollView = myTextField.iq.superviewOf(type: UIScrollView.self)
+```
+
+## Per-Controller Customization
+
+View controllers can be disabled using class-level arrays:
+
+```swift
+class MyViewController: UIViewController {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // Disable for this controller only
+        IQKeyboardManager.shared.disabledDistanceHandlingClasses.append(MyViewController.self)
+    }
+}
+```
+
+Or configure at app launch:
+
+```swift
+IQKeyboardManager.shared.disabledDistanceHandlingClasses += [
+    LoginViewController.self,
+    SignupViewController.self
+]
+```
+
+## Performance Considerations
+
+### Main Thread Enforcement
+
+All IQKeyboardManager APIs are marked with `@MainActor` to ensure thread safety:
+
+```swift
+@MainActor
+@objcMembers public final class IQKeyboardManager: NSObject {
+    // All operations run on main thread
+}
+```
+
+### Animation Synchronization
+
+Adjustments are animated to match keyboard animation timing:
+
+```swift
+activeConfiguration.animate(alongsideTransition: {
+    // View adjustments happen here
+})
+```
+
+### Layout Updates
+
+By default, IQKeyboardManager doesn't force layout updates. Enable if needed:
+
+```swift
+// Forces setNeedsLayout() and layoutIfNeeded() on adjustments
+IQKeyboardManager.shared.layoutIfNeededOnUpdate = true
+```
+
+<Warning>
+Setting `layoutIfNeededOnUpdate = true` may impact performance with complex layouts. Only enable if you experience layout issues during keyboard transitions.
+</Warning>
+
+### State Restoration
+
+The library efficiently tracks original states to restore views:
+
+- `IQRootControllerConfiguration` - Stores root controller origin and safe area
+- `IQScrollViewConfiguration` - Stores scroll view content offset and insets
+- `movedDistance` - Tracks total adjustment applied
+
+### Interactive Gesture Handling
+
+Special handling for interactive navigation gestures:
+
+```swift
+var isInteractiveGestureActive: Bool {
+    guard let navigationController = rootController.navigationController,
+          let gesture = navigationController.interactivePopGestureRecognizer else {
+        return false
+    }
+    return gesture.state == .began || gesture.state == .changed
+}
+```
+
+During interactive pop gestures, IQKeyboardManager defers restoration until the gesture completes or cancels.
+
+## Manual Refresh
+
+If you make programmatic layout changes while the keyboard is visible, call:
+
+```swift
+IQKeyboardManager.shared.reloadLayoutIfNeeded()
+```
+
+This recalculates and reapplies position adjustments.
+
+<Accordion title="When to call reloadLayoutIfNeeded()">
+Call this method after:
+
+- Programmatically changing view frames
+- Adding/removing views while keyboard is visible
+- Modifying Auto Layout constraints affecting text field position
+- Custom orientation changes
+
+```swift
+// Example: After constraint update
+myConstraint.constant = 100
+view.layoutIfNeeded()
+IQKeyboardManager.shared.reloadLayoutIfNeeded()
+```
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/core/configuration">
+    Learn about configuration architecture and settings
+  </Card>
+  <Card title="Subspecs" icon="puzzle-piece" href="/core/subspecs">
+    Understand the modular subspec architecture
+  </Card>
+</CardGroup>

@@ -1,0 +1,336 @@
+---
+title: 'IQScrollViewConfiguration'
+description: 'Internal struct that stores scroll view adjustment state for restoration'
+icon: 'arrows-rotate'
+---
+
+## Overview
+
+`IQScrollViewConfiguration` is an internal struct that captures the initial state of a scroll view before keyboard adjustments are applied. It records content offsets, insets, and scroll indicators, then provides restoration functionality to return the scroll view to its original state when the keyboard is dismissed.
+
+<Warning>
+  This is an internal struct and is not part of the public API. The documentation is provided for understanding the library's architecture.
+</Warning>
+
+## Purpose
+
+The scroll view configuration:
+- Captures the initial content offset before keyboard-induced scrolling
+- Records the original content insets
+- Stores the initial scroll indicator insets
+- Tracks whether content offset restoration is allowed
+- Provides restoration functionality to revert scroll adjustments
+- Handles special cases for UITableView, UICollectionView, and UIStackView
+
+## Properties
+
+### scrollView
+
+```swift
+let scrollView: UIScrollView
+```
+
+<ParamField path="scrollView" type="UIScrollView">
+  A reference to the scroll view whose state is being tracked. This can be any `UIScrollView` subclass, including `UITableView`, `UICollectionView`, and `UITextView`.
+</ParamField>
+
+### startingContentOffset
+
+```swift
+let startingContentOffset: CGPoint
+```
+
+<ParamField path="startingContentOffset" type="CGPoint">
+  The original content offset of the scroll view before any keyboard adjustments.
+  
+  Captured during initialization from:
+  ```swift
+  scrollView.contentOffset
+  ```
+  
+  This value is used to restore the scroll position when the keyboard is dismissed, ensuring users return to their original scroll location.
+</ParamField>
+
+### startingScrollIndicatorInsets
+
+```swift
+let startingScrollIndicatorInsets: UIEdgeInsets
+```
+
+<ParamField path="startingScrollIndicatorInsets" type="UIEdgeInsets">
+  The original scroll indicator insets before adjustments.
+  
+  Captured during initialization from:
+  ```swift
+  scrollView.verticalScrollIndicatorInsets
+  ```
+  
+  These insets control the positioning of the scroll bar and are adjusted to avoid overlapping with the keyboard.
+</ParamField>
+
+### startingContentInset
+
+```swift
+let startingContentInset: UIEdgeInsets
+```
+
+<ParamField path="startingContentInset" type="UIEdgeInsets">
+  The original content insets before keyboard adjustments.
+  
+  Captured during initialization from:
+  ```swift
+  scrollView.contentInset
+  ```
+  
+  Content insets are modified to create space for the keyboard, and this property stores the original values for restoration.
+</ParamField>
+
+### canRestoreContentOffset
+
+```swift
+private let canRestoreContentOffset: Bool
+```
+
+<ParamField path="canRestoreContentOffset" type="Bool">
+  An internal flag indicating whether content offset restoration is permitted for this scroll view.
+  
+  This is set during initialization based on the keyboard manager's configuration and the specific scroll view's settings. When `false`, only content insets are restored, not the scroll position.
+</ParamField>
+
+### hasChanged
+
+```swift
+var hasChanged: Bool { get }
+```
+
+<ResponseField name="hasChanged" type="Bool">
+  Indicates whether the scroll view's state has been modified from its initial configuration.
+  
+  Returns `true` when:
+  - The current content inset differs from `startingContentInset`, OR
+  - Content offset restoration is enabled and the current content offset differs from `startingContentOffset`
+  
+  This property is used to determine if restoration is needed when the keyboard is dismissed.
+</ResponseField>
+
+## Initialization
+
+```swift
+init(scrollView: UIScrollView, canRestoreContentOffset: Bool)
+```
+
+Creates a new configuration by capturing the current state of the provided scroll view.
+
+**Parameters:**
+- `scrollView`: The scroll view to track
+- `canRestoreContentOffset`: Whether to restore content offset on dismissal
+
+**Example:**
+```swift
+let config = IQScrollViewConfiguration(
+    scrollView: myScrollView,
+    canRestoreContentOffset: true
+)
+```
+
+During initialization:
+1. Stores a reference to the scroll view
+2. Captures `contentOffset` → `startingContentOffset`
+3. Captures `contentInset` → `startingContentInset`
+4. Captures `verticalScrollIndicatorInsets` → `startingScrollIndicatorInsets`
+5. Stores the `canRestoreContentOffset` flag
+
+## Methods
+
+### restore(for:)
+
+Restores the scroll view to its original state, optionally considering the active text input view.
+
+```swift
+@discardableResult
+func restore(for textInputView: (some IQTextInputView)?) -> Bool
+```
+
+**Parameters:**
+- `textInputView`: The currently active text input view, used to determine animation behavior
+
+<ResponseField name="return" type="Bool">
+  Returns `true` if any restoration occurred (content inset or content offset was changed), `false` if the scroll view was already in its original state.
+</ResponseField>
+
+**Restoration Process:**
+
+<Steps>
+  <Step title="Restore Content Insets">
+    If the current content inset differs from `startingContentInset`:
+    ```swift
+    scrollView.contentInset = startingContentInset
+    scrollView.layoutIfNeeded() // Bug fix: #1996
+    ```
+  </Step>
+  
+  <Step title="Restore Scroll Indicators">
+    If the current scroll indicator insets differ from `startingScrollIndicatorInsets`:
+    ```swift
+    scrollView.verticalScrollIndicatorInsets = startingScrollIndicatorInsets
+    ```
+  </Step>
+  
+  <Step title="Restore Content Offset">
+    If content offset restoration is enabled and the offset has changed:
+    ```swift
+    if canRestoreContentOffset && 
+       scrollView.iq.restoreContentOffset &&
+       !scrollView.contentOffset.equalTo(startingContentOffset) {
+        // Restore with animation
+    }
+    ```
+  </Step>
+</Steps>
+
+## Animation Behavior
+
+The restoration method includes special logic for animated vs. non-animated content offset restoration:
+
+```swift
+let animatedContentOffset: Bool = stackView != nil ||
+                                   scrollView is UICollectionView ||
+                                   scrollView is UITableView
+
+if animatedContentOffset {
+    scrollView.setContentOffset(startingContentOffset, animated: UIView.areAnimationsEnabled)
+} else {
+    scrollView.contentOffset = startingContentOffset
+}
+```
+
+**Animation Rules:**
+
+<CardGroup cols={3}>
+  <Card title="UITableView" icon="table">
+    Animated restoration to provide smooth scroll-back behavior
+  </Card>
+  <Card title="UICollectionView" icon="grid">
+    Animated restoration to sync with layout updates
+  </Card>
+  <Card title="UIStackView Container" icon="layer-group">
+    Animated when text input is inside a stack view (Bug fixes: #1365, #1508, #1541)
+  </Card>
+</CardGroup>
+
+<Info>
+  For other scroll views (including plain `UIScrollView` and `UITextView`), content offset is set directly without animation to avoid visual glitches.
+</Info>
+
+## Special Handling
+
+### UIStackView Detection
+
+When restoring content offset, the configuration checks if the text input view is inside a `UIStackView`:
+
+```swift
+let stackView: UIStackView? = textInputView?.iq.superviewOf(
+    type: UIStackView.self,
+    belowView: scrollView
+)
+```
+
+This detection is crucial because stack views have special layout behavior that requires animated offset restoration (Bug IDs: #1365, #1508, #1541).
+
+### Per-View Restoration Control
+
+The restoration respects the per-view `restoreContentOffset` setting:
+
+```swift
+if scrollView.iq.restoreContentOffset {
+    // Restore content offset
+}
+```
+
+This allows individual scroll views to opt out of content offset restoration via:
+```swift
+myScrollView.iq.restoreContentOffset = false
+```
+
+### Layout Synchronization
+
+After modifying content insets, the configuration forces a layout pass:
+
+```swift
+scrollView.contentInset = startingContentInset
+scrollView.layoutIfNeeded() // Bug ID: #1996
+```
+
+This ensures constraints and subview positions are recalculated immediately, preventing layout inconsistencies.
+
+## Lifecycle
+
+### When Configuration is Created
+
+A new `IQScrollViewConfiguration` is created when:
+1. A text input view inside a scroll view becomes active
+2. The keyboard appears and scroll view adjustments are needed
+3. The library determines the scroll view needs to be scrolled or inset-adjusted to reveal the text input
+
+### When Configuration is Restored
+
+The `restore(for:)` method is called when:
+- The keyboard is dismissed
+- A text input inside the scroll view resigns first responder
+- The user navigates away from the view controller
+- The keyboard manager is disabled
+- An orientation change requires restoration before recalculation
+
+## Usage in IQKeyboardManager
+
+The keyboard manager maintains a collection of scroll view configurations:
+
+```swift
+// Pseudo-code representation
+var scrollViewConfigurations: [UIScrollView: IQScrollViewConfiguration] = [:]
+
+// Create configuration when adjusting
+if needsScrollViewAdjustment {
+    let config = IQScrollViewConfiguration(
+        scrollView: scrollView,
+        canRestoreContentOffset: manager.restoreContentOffset
+    )
+    scrollViewConfigurations[scrollView] = config
+}
+
+// Restore when dismissing
+for config in scrollViewConfigurations.values {
+    config.restore(for: activeTextInputView)
+}
+scrollViewConfigurations.removeAll()
+```
+
+## Value Type Benefits
+
+Using a struct (value type) provides several advantages:
+
+1. **State Immutability**: Original values (`startingContentOffset`, etc.) cannot be accidentally modified
+2. **Clear Snapshots**: Each configuration represents a point-in-time snapshot of the scroll view state
+3. **Simplified Lifecycle**: No memory management concerns or cleanup required
+4. **Thread Safety**: Value semantics prevent unintended sharing across contexts
+
+## Bug Fixes Referenced
+
+The implementation includes fixes for several specific issues:
+
+- **#1365, #1508, #1541**: Stack view layout issues requiring animated restoration
+- **#1901, #1996**: Collection view and table view restoration glitches
+- **#1996**: Content inset restoration requiring explicit `layoutIfNeeded()`
+
+## Thread Safety
+
+<Info>
+  The struct is marked with `@MainActor`, ensuring all operations occur on the main thread. This is essential since it manipulates scroll view properties that affect UI layout.
+</Info>
+
+## See Also
+
+- [IQActiveConfiguration](/api/active-configuration) - Coordinates overall keyboard adjustment state
+- [IQRootControllerConfiguration](/api/root-controller-configuration) - Tracks root view controller state
+- [IQKeyboardManager](/api/iqkeyboardmanager) - Main keyboard manager class
+- [UIScrollView Extensions](/api/uiscrollview-extensions) - Per-scroll-view customization APIs

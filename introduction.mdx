@@ -1,0 +1,154 @@
+---
+title: Introduction
+description: Learn about IQKeyboardManager, a codeless drop-in universal library that prevents the iOS keyboard from covering UITextField and UITextView.
+---
+
+## What is IQKeyboardManager?
+
+IQKeyboardManager is a **codeless drop-in universal library** that automatically prevents issues of the keyboard sliding up and covering `UITextField` or `UITextView` in your iOS applications.
+
+<Note>
+No code, no manual setup, no subclassing required. Simply enable it and it works.
+</Note>
+
+## The Problem It Solves
+
+When developing iOS apps, we often run into issues where the iPhone keyboard slides up and covers text fields or text views. This creates a poor user experience where users can't see what they're typing.
+
+Traditionally, solving this problem requires:
+- Manual UIScrollView management
+- Tracking keyboard notifications
+- Calculating content offsets
+- Handling different screen sizes and orientations
+- Writing repetitive code for every view controller
+
+**IQKeyboardManager eliminates all of this.**
+
+## Key Benefits
+
+<CardGroup cols={2}>
+  <Card title="One Line of Code" icon="code">
+    Just enable it in your AppDelegate and it works automatically
+  </Card>
+  <Card title="Works Automatically" icon="wand-magic-sparkles">
+    No manual setup or configuration required per screen
+  </Card>
+  <Card title="No More UIScrollView" icon="scroll">
+    Automatically handles all scroll views, table views, and collection views
+  </Card>
+  <Card title="No More Subclasses" icon="layer-group">
+    Works with standard UIKit components without subclassing
+  </Card>
+  <Card title="Universal Solution" icon="globe">
+    Works across your entire app with all interface orientations
+  </Card>
+  <Card title="Modular Architecture" icon="puzzle-piece">
+    Include only the features you need via subspecs
+  </Card>
+</CardGroup>
+
+## Core Features
+
+The library includes several powerful features:
+
+### Always Included (Core)
+
+- Automatic keyboard avoidance for UITextField/UITextView
+- Support for UIScrollView, UITableView, UICollectionView
+- All interface orientations supported
+- Configurable keyboard distance
+- Class-level enable/disable control
+
+### Optional Features (via Subspecs)
+
+- **Toolbar**: Previous/Next/Done buttons above the keyboard
+- **Return Key Handling**: Customize return key behavior
+- **Tap-to-Resign**: Dismiss keyboard by tapping outside text fields
+- **Keyboard Appearance**: Configure keyboard appearance globally
+- **IQTextView**: UITextView with placeholder support
+
+<Tip>
+By default, all subspecs are included. You can optimize your app size by including only the subspecs you need.
+</Tip>
+
+## Architecture Overview
+
+IQKeyboardManager uses a **modular architecture** organized into subspecs:
+
+```
+IQKeyboardManagerSwift
+├── Core (required)
+│   └── Basic keyboard distance management
+├── Appearance (optional)
+│   └── Keyboard appearance configuration
+├── IQKeyboardReturnManager (optional)
+│   └── Return key handling
+├── IQKeyboardToolbarManager (optional)
+│   └── Toolbar with Previous/Next/Done buttons
+├── IQTextView (optional)
+│   └── UITextView with placeholder support
+└── Resign (optional)
+    └── Tap-to-dismiss functionality
+```
+
+Each subspec is a separate module that can be included independently, though by default all are included for convenience.
+
+## Thread Safety
+
+<Warning>
+All public APIs must be called from the **main thread**.
+</Warning>
+
+The `IQKeyboardManager` class is marked with `@MainActor` to enforce thread safety at compile time. This means:
+
+- All properties and methods must be accessed from the main thread
+- The compiler will prevent accidental background thread access
+- This ensures UI updates happen safely on the main thread
+
+## Requirements
+
+### Platform Requirements
+
+| Component | Minimum iOS Version | Minimum Xcode |
+|-----------|---------------------|---------------|
+| IQKeyboardManagerSwift | iOS 13.0 | Xcode 13 |
+| Demo Project | iOS 13.0 | Xcode 15 |
+
+### Swift Version Compatibility
+
+| Swift Version | Xcode Version | IQKeyboardManagerSwift Version |
+|---------------|---------------|--------------------------------|
+| 5.9, 5.8, 5.7 | Xcode 16 | >= 7.0.0 |
+| 5.9, 5.8, 5.7, 5.6 | Xcode 15 | >= 7.0.0 |
+| 5.5, 5.4, 5.3, 5.2, 5.1, 5.0, 4.2 | Xcode 11 | >= 6.5.7 |
+| 5.1, 5.0, 4.2, 4.0, 3.2, 3.0 | Xcode 11 | >= 6.5.0 |
+| 5.0, 4.2, 4.0, 3.2, 3.0 | Xcode 10.2 | >= 6.2.1 |
+| 4.2, 4.0, 3.2, 3.0 | Xcode 10.0 | >= 6.0.4 |
+| 4.0, 3.2, 3.0 | Xcode 9.0 | 5.0.0 |
+
+<Note>
+The current version (8.0.2) supports Swift 5.7, 5.8, and 5.9.
+</Note>
+
+## Important Notes
+
+<Warning>
+**Not for SDK/Framework Development**
+
+If you're building an SDK, library, or framework, do **not** include IQKeyboardManager as a dependency. Instead, implement your own keyboard handling solution. IQKeyboardManager is designed for app projects, not for shipping with third-party libraries, as it could block adoption by other developers who have their own keyboard solutions.
+</Warning>
+
+### Third-Party Library Conflicts
+
+If IQKeyboardManager conflicts with other third-party libraries, it's the **developer's responsibility** to enable/disable IQKeyboardManager when presenting/dismissing third-party library UI. Third-party libraries are not responsible for handling IQKeyboardManager.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install IQKeyboardManager using CocoaPods, SPM, or Carthage
+  </Card>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get up and running in less than 5 minutes
+  </Card>
+</CardGroup>

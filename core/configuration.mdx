@@ -1,0 +1,587 @@
+---
+title: 'Configuration'
+description: 'Configuration architecture and customization options in IQKeyboardManager'
+---
+
+## Configuration Architecture
+
+IQKeyboardManager uses a multi-layered configuration system with three main components:
+
+<CardGroup cols={3}>
+  <Card title="IQActiveConfiguration" icon="wave-pulse">
+    Coordinates keyboard and text input state
+  </Card>
+  <Card title="IQRootControllerConfiguration" icon="window-restore">
+    Tracks view controller layout state
+  </Card>
+  <Card title="IQScrollViewConfiguration" icon="scroll">
+    Stores scroll view adjustments
+  </Card>
+</CardGroup>
+
+## IQActiveConfiguration
+
+The central coordinator that manages the active keyboard session.
+
+### Responsibilities
+
+- Observes keyboard notifications via `IQKeyboardNotification`
+- Monitors text input changes via `IQTextInputViewNotification`
+- Determines when to trigger `adjustPosition()` or `restorePosition()`
+- Maintains current keyboard info and active text input view
+- Manages root controller configuration lifecycle
+
+### Key Properties
+
+```swift
+internal final class IQActiveConfiguration {
+    // Keyboard state
+    var keyboardInfo: IQKeyboardInfo { get }
+    
+    // Active text input
+    var textInputView: (any IQTextInputView)? { get }
+    var textInputViewInfo: IQTextInputViewInfo? { get }
+    
+    // Root controller state
+    var rootConfiguration: IQRootControllerConfiguration?
+    
+    // Ready when all components initialized
+    var isReady: Bool { get }
+}
+```
+
+### Event System
+
+IQActiveConfiguration sends three types of events:
+
+- **Show** - Keyboard appeared
+- **Change** - Keyboard or text input changed
+- **Hide** - Keyboard dismissed
+
+```swift
+enum Event {
+    case hide
+    case show
+    case change
+}
+```
+
+Subscribers receive notifications through the configuration completion handler:
+
+```swift
+typealias ConfigurationCompletion = (
+    _ event: Event,
+    _ keyboardInfo: IQKeyboardInfo,
+    _ textInputViewInfo: IQTextInputViewInfo?
+) -> Void
+```
+
+## IQRootControllerConfiguration
+
+Captures and manages the root view controller's initial layout state.
+
+### Stored Properties
+
+```swift
+internal struct IQRootControllerConfiguration {
+    weak var rootController: UIViewController?
+    
+    // Initial state captured at keyboard show
+    let beginOrigin: CGPoint
+    let beginSafeAreaInsets: UIEdgeInsets
+    let beginOrientation: UIInterfaceOrientation
+}
+```
+
+### Computed Properties
+
+```swift
+// Current device orientation
+var currentOrientation: UIInterfaceOrientation { get }
+
+// Whether controller is in a window
+var isReady: Bool { get }
+
+// Whether view origin has changed
+var hasChanged: Bool { get }
+
+// Whether interactive pop gesture is active
+var isInteractiveGestureActive: Bool { get }
+```
+
+### Restoration
+
+```swift
+func restore() -> Bool {
+    guard let rootController = rootController,
+          !rootController.view.frame.origin.equalTo(beginOrigin) else { 
+        return false 
+    }
+    
+    var rect = rootController.view.frame
+    rect.origin = beginOrigin
+    rootController.view.frame = rect
+    return true
+}
+```
+
+<Note>
+`IQRootControllerConfiguration` is created when a text input becomes active and stores the original layout state to enable restoration when the keyboard dismisses.
+</Note>
+
+## IQScrollViewConfiguration
+
+Manages scroll view state during keyboard adjustments.
+
+### Stored Properties
+
+```swift
+internal struct IQScrollViewConfiguration {
+    let scrollView: UIScrollView
+    let startingContentOffset: CGPoint
+    let startingScrollIndicatorInsets: UIEdgeInsets
+    let startingContentInset: UIEdgeInsets
+    
+    private let canRestoreContentOffset: Bool
+}
+```
+
+### State Management
+
+```swift
+// Check if scroll view state has changed
+var hasChanged: Bool {
+    if scrollView.contentInset != startingContentInset {
+        return true
+    }
+    
+    if canRestoreContentOffset,
+       scrollView.iq.restoreContentOffset,
+       !scrollView.contentOffset.equalTo(startingContentOffset) {
+        return true
+    }
+    return false
+}
+```
+
+### Restoration
+
+```swift
+func restore(for textInputView: (some IQTextInputView)?) -> Bool {
+    var success = false
+    
+    // Restore content inset
+    if scrollView.contentInset != startingContentInset {
+        scrollView.contentInset = startingContentInset
+        scrollView.layoutIfNeeded()
+        success = true
+    }
+    
+    // Restore scroll indicator insets
+    if scrollView.verticalScrollIndicatorInsets != startingScrollIndicatorInsets {
+        scrollView.verticalScrollIndicatorInsets = startingScrollIndicatorInsets
+    }
+    
+    // Restore content offset (if configured)
+    if canRestoreContentOffset,
+       scrollView.iq.restoreContentOffset,
+       !scrollView.contentOffset.equalTo(startingContentOffset) {
+        scrollView.contentOffset = startingContentOffset
+        success = true
+    }
+    
+    return success
+}
+```
+
+<Accordion title="Content offset restoration">
+The `canRestoreContentOffset` flag controls whether the scroll view's content offset is restored when the keyboard dismisses.
+
+- Set to `true` for scroll views containing the text field
+- Set to `false` for the text view itself (when it's scrollable)
+
+This prevents scroll position "jumping" in complex layouts.
+</Accordion>
+
+## Global Settings
+
+Configure IQKeyboardManager globally via the shared instance.
+
+### Enable/Disable
+
+```swift
+// Enable keyboard management (default: false)
+IQKeyboardManager.shared.isEnabled = true
+
+// Disable keyboard management
+IQKeyboardManager.shared.isEnabled = false
+```
+
+<Warning>
+`isEnabled` defaults to `false`. You must explicitly enable IQKeyboardManager in your AppDelegate.
+</Warning>
+
+### Keyboard Distance
+
+Set the default distance between keyboard and text input:
+
+```swift
+// Default: 10.0 points
+IQKeyboardManager.shared.keyboardDistance = 20.0
+```
+
+Requirements:
+- Must be non-negative
+- Negative values log warnings
+
+```swift
+public var keyboardDistance: CGFloat = 10.0 {
+    didSet {
+        if keyboardDistance < 0 {
+            showLog("⚠️ keyboardDistance shouldn't be negative.")
+        }
+    }
+}
+```
+
+### Layout Behavior
+
+```swift
+// Force layout updates during adjustments (default: false)
+IQKeyboardManager.shared.layoutIfNeededOnUpdate = false
+```
+
+When `true`, calls `setNeedsLayout()` and `layoutIfNeeded()` on each frame update.
+
+### Class-Level Control
+
+Disable keyboard management for specific view controller types:
+
+```swift
+// Default disabled classes
+IQKeyboardManager.shared.disabledDistanceHandlingClasses = [
+    UITableViewController.self,
+    UIInputViewController.self,
+    UIAlertController.self
+]
+
+// Add custom controllers
+IQKeyboardManager.shared.disabledDistanceHandlingClasses.append(
+    MyCustomViewController.self
+)
+```
+
+Force enable for specific classes:
+
+```swift
+IQKeyboardManager.shared.enabledDistanceHandlingClasses = [
+    SpecialViewController.self
+]
+```
+
+<Note>
+If a class appears in both arrays, `disabledDistanceHandlingClasses` takes precedence.
+</Note>
+
+## Per-View Settings
+
+All per-view configuration uses the `.iq` extension namespace.
+
+### Distance from Keyboard
+
+Override the global keyboard distance for specific views:
+
+```swift
+// Use custom distance
+textField.iq.distanceFromKeyboard = 50.0
+
+// Revert to global setting
+textField.iq.distanceFromKeyboard = UIView.defaultKeyboardDistance
+```
+
+Implementation:
+
+```swift
+public extension IQKeyboardExtension where Base: IQTextInputView {
+    var distanceFromKeyboard: CGFloat {
+        get {
+            if let base = base {
+                if let value = objc_getAssociatedObject(base, &AssociatedKeys.distanceFromKeyboard) as? CGFloat {
+                    return value
+                }
+            }
+            return UIView.defaultKeyboardDistance
+        }
+        set(newValue) {
+            if let base = base {
+                objc_setAssociatedObject(base, &AssociatedKeys.distanceFromKeyboard,
+                                        newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            }
+            
+            if newValue < 0 {
+                IQKeyboardManager.shared.showLog("Warning: distanceFromKeyboard shouldn't be negative.")
+            }
+        }
+    }
+}
+```
+
+### Enable Mode
+
+Control keyboard management per text input view:
+
+```swift
+// Use global setting (default)
+textField.iq.enableMode = .default
+
+// Force enable for this view
+textField.iq.enableMode = .enabled
+
+// Force disable for this view
+textField.iq.enableMode = .disabled
+```
+
+Enable modes:
+
+```swift
+public enum IQEnableMode: Int {
+    case `default`  // Use global isEnabled setting
+    case enabled    // Always enable for this view
+    case disabled   // Always disable for this view
+}
+```
+
+<Accordion title="Enable mode priority">
+IQKeyboardManager evaluates enable state in this order:
+
+1. **View-specific enable mode** (`.iq.enableMode`)
+   - `.enabled` → Always enabled
+   - `.disabled` → Always disabled
+   - `.default` → Continue to next check
+
+2. **View controller class lists**
+   - If in `disabledDistanceHandlingClasses` → Disabled
+   - If in `enabledDistanceHandlingClasses` → Enabled
+   - Otherwise → Use global setting
+
+3. **Global setting** (`IQKeyboardManager.shared.isEnabled`)
+
+```swift
+// From IQKeyboardManager+Internal.swift
+func privateIsEnabled() -> Bool {
+    guard let textInputView = activeConfiguration.textInputView else {
+        return isEnabled
+    }
+    
+    switch textInputView.internalEnableMode {
+    case .default:
+        // Check controller classes...
+        // Fall back to global isEnabled
+    case .enabled:
+        return true
+    case .disabled:
+        return false
+    }
+}
+```
+</Accordion>
+
+## ScrollView-Specific Settings
+
+Control scroll view adjustment behavior using `.iq` extensions.
+
+### Ignore Scrolling Adjustment
+
+Prevent IQKeyboardManager from adjusting a scroll view's content offset:
+
+```swift
+scrollView.iq.ignoreScrollingAdjustment = true
+```
+
+The library checks this when finding scrollable parents:
+
+```swift
+while let view = superView {
+    if view.isScrollEnabled, !view.iq.ignoreScrollingAdjustment {
+        superScrollView = view
+        break
+    }
+    superView = view.iq.superviewOf(type: UIScrollView.self)
+}
+```
+
+### Ignore Content Inset Adjustment
+
+Prevent IQKeyboardManager from modifying content insets:
+
+```swift
+scrollView.iq.ignoreContentInsetAdjustment = true
+```
+
+Used when calculating scroll view adjustments:
+
+```swift
+guard let lastScrollViewRect = lastScrollView.superview?.convert(lastScrollView.frame, to: window),
+      !lastScrollView.iq.ignoreContentInsetAdjustment else { 
+    return 
+}
+```
+
+### Restore Content Offset
+
+Control whether content offset is restored when keyboard dismisses:
+
+```swift
+// Restore original content offset (default: true)
+scrollView.iq.restoreContentOffset = true
+
+// Keep adjusted content offset
+scrollView.iq.restoreContentOffset = false
+```
+
+## Configuration Best Practices
+
+### 1. Initialize Early
+
+Enable IQKeyboardManager in `AppDelegate`:
+
+```swift
+@main
+class AppDelegate: UIResponder, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+    ) -> Bool {
+        // Configure before views load
+        IQKeyboardManager.shared.isEnabled = true
+        IQKeyboardManager.shared.keyboardDistance = 15.0
+        
+        return true
+    }
+}
+```
+
+### 2. Use Global Settings as Defaults
+
+Set global defaults, then override per-view as needed:
+
+```swift
+// Global default
+IQKeyboardManager.shared.keyboardDistance = 10.0
+
+// Override for specific text fields
+largeTextField.iq.distanceFromKeyboard = 30.0
+compactTextField.iq.distanceFromKeyboard = 5.0
+```
+
+### 3. Disable for Special Controllers
+
+Disable for view controllers with custom keyboard handling:
+
+```swift
+IQKeyboardManager.shared.disabledDistanceHandlingClasses += [
+    CustomKeyboardViewController.self,
+    ChatViewController.self
+]
+```
+
+### 4. Use Enable Modes Sparingly
+
+Prefer class-level disabling over per-view enable modes:
+
+```swift
+// ✅ Good: Disable entire controller
+IQKeyboardManager.shared.disabledDistanceHandlingClasses.append(MyViewController.self)
+
+// ❌ Less ideal: Disable individual fields
+textField1.iq.enableMode = .disabled
+textField2.iq.enableMode = .disabled
+textField3.iq.enableMode = .disabled
+```
+
+### 5. Test Scroll View Behavior
+
+If you have nested scroll views, test thoroughly:
+
+```swift
+// Outer scroll view: Allow offset adjustment
+outerScrollView.iq.ignoreScrollingAdjustment = false
+
+// Inner scroll view: Prevent adjustment
+innerScrollView.iq.ignoreScrollingAdjustment = true
+```
+
+### 6. Configure Distance by Density
+
+Adjust keyboard distance based on UI density:
+
+```swift
+// Sparse UI: More breathing room
+sparseTextField.iq.distanceFromKeyboard = 30.0
+
+// Dense UI: Minimal distance
+denseTextField.iq.distanceFromKeyboard = 5.0
+```
+
+### 7. Handle Layout Updates
+
+For complex layouts, enable layout forcing:
+
+```swift
+// Views with complex constraints
+IQKeyboardManager.shared.layoutIfNeededOnUpdate = true
+```
+
+<Warning>
+Only enable `layoutIfNeededOnUpdate` if you experience layout issues. It can impact performance with complex view hierarchies.
+</Warning>
+
+### 8. Document Custom Configuration
+
+Add comments when using non-default settings:
+
+```swift
+// Disabled because this controller manages keyboard manually
+IQKeyboardManager.shared.disabledDistanceHandlingClasses.append(CustomChatController.self)
+
+// Extra distance needed to clear custom accessory view
+messageField.iq.distanceFromKeyboard = 50.0  // 30pt toolbar + 20pt padding
+```
+
+## Configuration Persistence
+
+IQKeyboardManager configuration is instance-based and persists for the app's lifetime:
+
+```swift
+// Singleton instance
+IQKeyboardManager.shared
+```
+
+Configuration changes apply immediately:
+
+```swift
+// Takes effect for next keyboard show
+IQKeyboardManager.shared.keyboardDistance = 25.0
+```
+
+Per-view settings use associated objects and persist with the view:
+
+```swift
+// Stored via objc_setAssociatedObject
+textField.iq.distanceFromKeyboard = 40.0
+```
+
+<Note>
+Configuration is not persisted between app launches. Set your preferred defaults in AppDelegate each time the app starts.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Keyboard Management" icon="keyboard" href="/core/keyboard-management">
+    Learn how IQKeyboardManager works internally
+  </Card>
+  <Card title="Subspecs" icon="puzzle-piece" href="/core/subspecs">
+    Understand the modular architecture
+  </Card>
+</CardGroup>

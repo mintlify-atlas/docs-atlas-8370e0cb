@@ -1,0 +1,466 @@
+---
+title: Migration Guide v7 to v8
+description: Upgrade from IQKeyboardManager v7 to v8 with modular architecture
+---
+
+## Overview
+
+Version 8.0 represents a major architectural shift where IQKeyboardManager has been split into smaller, focused libraries. This modular approach gives you more control over which features you include in your app.
+
+<Warning>
+  **Breaking Change**: The toolbar feature (`enableAutoToolbar`) is now **disabled by default** and moved to a separate library.
+</Warning>
+
+## Keyboard Toolbar Changes
+
+The most significant change in v8 is that `IQKeyboardManager.shared.enableAutoToolbar` now defaults to `false`. The toolbar functionality has been moved to the `IQKeyboardToolbarManager` library.
+
+### Solution 1: Re-enable in IQKeyboardManager
+
+If you want to keep using the toolbar with minimal changes:
+
+```swift
+// AppDelegate.swift
+import IQKeyboardManagerSwift
+
+func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    IQKeyboardManager.shared.enable = true
+    IQKeyboardManager.shared.enableAutoToolbar = true // [!code ++]
+    return true
+}
+```
+
+### Solution 2: Use IQKeyboardToolbarManager Directly
+
+For better modularity and control, use the new dedicated library:
+
+```swift
+// AppDelegate.swift
+import IQKeyboardManagerSwift
+import IQKeyboardToolbarManager // [!code ++]
+
+func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    IQKeyboardManager.shared.enable = true
+    IQKeyboardToolbarManager.shared.isEnabled = true // [!code ++]
+    return true
+}
+```
+
+## Features Moved to Independent Libraries
+
+Many features have been extracted into their own libraries for better modularity:
+
+<AccordionGroup>
+  <Accordion title="IQKeyboardToolbarManager">
+    **Repository**: [IQKeyboardToolbarManager](https://github.com/hackiftekhar/IQKeyboardToolbarManager)
+    
+    Handles all toolbar-related functionality including Previous/Next/Done buttons.
+    
+    **Installation**:
+    ```ruby
+    # CocoaPods
+    pod 'IQKeyboardToolbarManager'
+    ```
+    
+    ```swift
+    // Swift Package Manager
+    .package(url: "https://github.com/hackiftekhar/IQKeyboardToolbarManager.git", from: "1.0.0")
+    ```
+  </Accordion>
+  
+  <Accordion title="IQKeyboardNotification (formerly IQKeyboardListener)">
+    **Repository**: [IQKeyboardNotification](https://github.com/hackiftekhar/IQKeyboardNotification)
+    
+    Provides keyboard notification handling and state tracking.
+    
+    **Migration**:
+    ```swift
+    // Old (v7)
+    let listener = IQKeyboardListener()
+    
+    // New (v8)
+    import IQKeyboardNotification // [!code ++]
+    let listener = IQKeyboardNotification() // [!code ++]
+    ```
+  </Accordion>
+  
+  <Accordion title="IQTextInputViewNotification (formerly IQTextFieldViewListener)">
+    **Repository**: [IQTextInputViewNotification](https://github.com/hackiftekhar/IQTextInputViewNotification)
+    
+    Handles text field and text view editing notifications.
+    
+    **Migration**:
+    ```swift
+    // Old (v7)
+    let listener = IQTextFieldViewListener()
+    
+    // New (v8)
+    import IQTextInputViewNotification // [!code ++]
+    let listener = IQTextInputViewNotification() // [!code ++]
+    ```
+  </Accordion>
+  
+  <Accordion title="IQKeyboardReturnManager (formerly IQReturnKeyHandler)">
+    **Repository**: [IQKeyboardReturnManager](https://github.com/hackiftekhar/IQKeyboardReturnManager)
+    
+    Manages return key behavior for chaining text fields.
+    
+    **Migration**:
+    ```swift
+    // Old (v7)
+    let handler = IQReturnKeyHandler(controller: self)
+    
+    // New (v8)
+    import IQKeyboardReturnManager // [!code ++]
+    let manager = IQKeyboardReturnManager(controller: self) // [!code ++]
+    ```
+  </Accordion>
+  
+  <Accordion title="IQKeyboardToolbar (formerly IQToolbar)">
+    **Repository**: [IQKeyboardToolbar](https://github.com/hackiftekhar/IQKeyboardToolbar)
+    
+    Provides the toolbar UI component.
+    
+    **Migration**:
+    ```swift
+    // Old (v7)
+    let toolbar = IQToolbar()
+    
+    // New (v8)
+    import IQKeyboardToolbar // [!code ++]
+    let toolbar = IQKeyboardToolbar() // [!code ++]
+    ```
+  </Accordion>
+  
+  <Accordion title="IQTextView">
+    **Repository**: [IQTextView](https://github.com/hackiftekhar/IQTextView)
+    
+    Enhanced UITextView with placeholder support.
+    
+    **Migration**: No code changes required, just add the separate library.
+  </Accordion>
+</AccordionGroup>
+
+## API Changes: IQKeyboardToolbarManager
+
+If you're using toolbar features, here are the key API migrations:
+
+### Properties Moved
+
+<CodeGroup>
+```swift v7 (IQKeyboardManager)
+// These properties were in IQKeyboardManager.shared
+var enableAutoToolbar: Bool
+var toolbarConfiguration: IQToolbarConfiguration
+var playInputClicks: Bool
+var disabledToolbarClasses: [UIViewController.Type]
+var enabledToolbarClasses: [UIViewController.Type]
+var deepResponderAllowedContainerClasses: [UIView.Type]
+var canGoPrevious: Bool
+var canGoNext: Bool
+func goPrevious() -> Bool
+func goNext() -> Bool
+func reloadInputViews()
+```
+
+```swift v8 (IQKeyboardToolbarManager)
+// Now in IQKeyboardToolbarManager.shared
+import IQKeyboardToolbarManager
+
+var isEnabled: Bool // Renamed from enableAutoToolbar
+var toolbarConfiguration: IQKeyboardToolbarConfiguration // Renamed type
+var playInputClicks: Bool
+var disabledToolbarClasses: [UIViewController.Type]
+var enabledToolbarClasses: [UIViewController.Type]
+var deepResponderAllowedContainerClasses: [UIView.Type]
+var canGoPrevious: Bool
+var canGoNext: Bool
+func goPrevious() -> Bool
+func goNext() -> Bool
+func reloadInputViews()
+```
+</CodeGroup>
+
+### UITextField/UITextView Extensions
+
+```swift
+// Old (v7) - Direct property
+textField.ignoreSwitchingByNextPrevious = true
+
+// New (v8) - Via iq wrapper
+import IQKeyboardToolbarManager // [!code ++]
+textField.iq.ignoreSwitchingByNextPrevious = true // [!code ++]
+```
+
+## API Changes: IQKeyboardToolbar
+
+Classes and configuration types have been renamed:
+
+<CodeGroup>
+```swift v7 Classes
+IQToolbar
+IQToolbarConfiguration
+IQToolbarPlaceholderConfiguration
+IQBarButtonItemConfiguration
+IQTitleBarButtonItem
+IQBarButtonItem
+IQInvocation
+```
+
+```swift v8 Classes
+IQKeyboardToolbar // [!code ++]
+IQKeyboardToolbarConfiguration // [!code ++]
+IQKeyboardToolbarPlaceholderConfiguration // [!code ++]
+IQBarButtonItemConfiguration // (same)
+IQTitleBarButtonItem // (same)
+IQBarButtonItem // (same)
+IQInvocation // (same)
+```
+</CodeGroup>
+
+### Toolbar Extension Methods
+
+```swift
+// Old (v7)
+textField.toolbar
+textField.hidePlaceholder = true
+textField.placeholder = "Enter text"
+textField.drawingPlaceholder
+textField.addToolbar(target: self, ...)
+textField.addDone(...)
+textField.addRightButton(...)
+
+// New (v8) - Via iq wrapper
+import IQKeyboardToolbar // [!code ++]
+textField.iq.toolbar // [!code ++]
+textField.iq.hidePlaceholder = true // [!code ++]
+textField.iq.placeholder = "Enter text" // [!code ++]
+textField.iq.drawingPlaceholder // [!code ++]
+textField.iq.addToolbar(target: self, ...) // [!code ++]
+textField.iq.addDone(...) // [!code ++]
+textField.iq.addRightButton(...) // [!code ++]
+```
+
+## Class Name Changes
+
+### IQPreviousNextView → IQDeepResponderContainerView
+
+<Warning>
+  If you're using `IQPreviousNextView` in Interface Builder, you must update both the class name and module.
+</Warning>
+
+<Steps>
+  <Step title="Open Storyboard/XIB">
+    Open your Interface Builder file
+  </Step>
+  <Step title="Select the View">
+    Select the view that's currently `IQPreviousNextView`
+  </Step>
+  <Step title="Update Class Name">
+    In Identity Inspector, change class to `IQDeepResponderContainerView`
+  </Step>
+  <Step title="Update Module">
+    Change module to `IQKeyboardToolbarManager`
+  </Step>
+</Steps>
+
+## CocoaPods Subspecs
+
+For easier migration, IQKeyboardManager v8 provides subspecs that automatically include the extracted libraries:
+
+```ruby
+# Podfile
+
+# Option 1: Include toolbar manager automatically
+pod 'IQKeyboardManagerSwift/IQKeyboardToolbarManager'
+
+# Option 2: Include return manager automatically
+pod 'IQKeyboardManagerSwift/IQKeyboardReturnManager'
+
+# Option 3: Include IQTextView automatically
+pod 'IQKeyboardManagerSwift/IQTextView'
+
+# Option 4: Include appearance features
+pod 'IQKeyboardManagerSwift/Appearance'
+
+# Option 5: Include resign on touch outside features
+pod 'IQKeyboardManagerSwift/Resign'
+
+# Or combine multiple subspecs
+pod 'IQKeyboardManagerSwift/IQKeyboardToolbarManager'
+pod 'IQKeyboardManagerSwift/Resign'
+```
+
+### Appearance Subspec
+
+Keyboard appearance overriding has been moved to a subspec:
+
+```swift
+// Only available with Appearance subspec
+IQKeyboardManager.shared.overrideAppearance = true
+IQKeyboardManager.shared.appearance = .dark
+```
+
+### Resign Subspec
+
+Resign on touch outside functionality moved to a subspec:
+
+```swift
+// Only available with Resign subspec
+IQKeyboardManager.shared.resignOnTouchOutside = true
+IQKeyboardManager.shared.disabledTouchResignedClasses = [CustomViewController.self]
+IQKeyboardManager.shared.enabledTouchResignedClasses = [AnotherViewController.self]
+IQKeyboardManager.shared.touchResignedGestureIgnoreClasses = [CustomView.self]
+
+// UITextField/UITextView extension
+textField.iq.resignOnTouchOutsideMode = .enabled
+```
+
+## Migration Steps
+
+<Steps>
+  <Step title="Update Dependencies">
+    Update your `Podfile` or `Package.swift` to version 8.0+
+    
+    ```ruby
+    # CocoaPods - use subspecs for easier migration
+    pod 'IQKeyboardManagerSwift/IQKeyboardToolbarManager'
+    pod 'IQKeyboardManagerSwift/Resign'
+    ```
+    
+    ```swift
+    // Swift Package Manager
+    .package(url: "https://github.com/hackiftekhar/IQKeyboardManager.git", from: "8.0.0"),
+    .package(url: "https://github.com/hackiftekhar/IQKeyboardToolbarManager.git", from: "1.0.0")
+    ```
+  </Step>
+  
+  <Step title="Install Dependencies">
+    ```bash
+    # CocoaPods
+    pod install
+    
+    # Swift Package Manager
+    # File > Packages > Update to Latest Package Versions
+    ```
+  </Step>
+  
+  <Step title="Enable Toolbar (if needed)">
+    Add to your AppDelegate:
+    
+    ```swift
+    import IQKeyboardToolbarManager
+    
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        IQKeyboardManager.shared.enable = true
+        IQKeyboardToolbarManager.shared.isEnabled = true
+        return true
+    }
+    ```
+  </Step>
+  
+  <Step title="Update Interface Builder Files">
+    Search for `IQPreviousNextView` in your storyboards/XIBs and update to:
+    - Class: `IQDeepResponderContainerView`
+    - Module: `IQKeyboardToolbarManager`
+  </Step>
+  
+  <Step title="Update Toolbar API Usage">
+    If using toolbar extensions, add `.iq` wrapper:
+    
+    ```swift
+    // Before
+    textField.toolbar
+    textField.placeholder = "Name"
+    
+    // After
+    import IQKeyboardToolbar
+    textField.iq.toolbar
+    textField.iq.placeholder = "Name"
+    ```
+  </Step>
+  
+  <Step title="Update Class References">
+    Replace renamed classes:
+    - `IQKeyboardListener` → `IQKeyboardNotification` (different library)
+    - `IQTextFieldViewListener` → `IQTextInputViewNotification` (different library)
+    - `IQReturnKeyHandler` → `IQKeyboardReturnManager` (different library)
+    - `IQToolbar` → `IQKeyboardToolbar` (different library)
+    - `IQToolbarConfiguration` → `IQKeyboardToolbarConfiguration`
+  </Step>
+  
+  <Step title="Build and Test">
+    - Build your project and fix any compilation errors
+    - Test keyboard behavior thoroughly
+    - Verify toolbar Previous/Next/Done buttons work
+    - Test resign on touch outside if you use it
+  </Step>
+</Steps>
+
+## Benefits of v8 Architecture
+
+<CardGroup cols={2}>
+  <Card title="Smaller Binary Size" icon="compress">
+    Only include features you actually use, reducing app size
+  </Card>
+  <Card title="Better Modularity" icon="cubes">
+    Each feature is independently maintained and versioned
+  </Card>
+  <Card title="Faster Compilation" icon="bolt">
+    Smaller modules compile faster during development
+  </Card>
+  <Card title="Clearer Dependencies" icon="diagram-project">
+    Explicit dependencies make code more maintainable
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Toolbar not showing">
+    **Solution**: Enable toolbar in AppDelegate:
+    ```swift
+    IQKeyboardManager.shared.enableAutoToolbar = true
+    // OR
+    import IQKeyboardToolbarManager
+    IQKeyboardToolbarManager.shared.isEnabled = true
+    ```
+  </Accordion>
+  
+  <Accordion title="Module 'IQKeyboardToolbarManager' not found">
+    **Solution**: Add the dependency to your package manager:
+    ```ruby
+    # CocoaPods
+    pod 'IQKeyboardManagerSwift/IQKeyboardToolbarManager'
+    ```
+    
+    ```swift
+    // Swift Package Manager
+    .package(url: "https://github.com/hackiftekhar/IQKeyboardToolbarManager.git", from: "1.0.0")
+    ```
+  </Accordion>
+  
+  <Accordion title="IQPreviousNextView class not found in Interface Builder">
+    **Solution**: Change to `IQDeepResponderContainerView` with module `IQKeyboardToolbarManager`
+  </Accordion>
+  
+  <Accordion title="Property 'toolbar' not found on UITextField">
+    **Solution**: Import the toolbar library and use `.iq` wrapper:
+    ```swift
+    import IQKeyboardToolbar
+    textField.iq.toolbar
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Need Help?
+
+If you encounter issues during migration:
+
+1. Check the [GitHub Issues](https://github.com/hackiftekhar/IQKeyboardManager/issues)
+2. Review the individual library documentation
+3. Create a new issue with your specific problem
+
+<Info>
+  **Incremental Migration**: If the migration seems overwhelming, consider using the CocoaPods subspecs which automatically include the extracted libraries as dependencies.
+</Info>

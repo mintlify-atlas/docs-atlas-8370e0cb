@@ -1,97 +1,168 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "IQKeyboardManager"
+description: "Codeless drop-in universal library that prevents keyboard from covering UITextField/UITextView in iOS apps"
 ---
 
-## Setting up
+<img
+  className="block"
+  src="https://raw.githubusercontent.com/hackiftekhar/IQKeyboardManager/master/Screenshot/Social.png"
+  alt="IQKeyboardManager"
+/>
 
-Get your documentation site up and running in minutes.
+## Zero-Code Keyboard Management for iOS
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+IQKeyboardManager is a drop-in universal library that automatically prevents the iOS keyboard from covering UITextField and UITextView. No code required, no manual setup needed—just enable it and it works.
 
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
+<CardGroup cols={2}>
   <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
+    title="Quickstart"
+    icon="rocket"
+    href="/quickstart"
   >
-    Edit your docs locally and preview them in real time.
+    Get up and running with one line of code
   </Card>
   <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
+    title="Installation"
+    icon="download"
+    href="/installation"
   >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+    Install via CocoaPods, SPM, or Carthage
   </Card>
   <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
+    title="Configuration"
+    icon="sliders"
+    href="/core/configuration"
   >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
-
-## Create beautiful pages
-
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
+    Customize keyboard distance and behavior
   </Card>
   <Card
-    title="Code samples"
+    title="API Reference"
     icon="code"
-    href="/essentials/code"
+    href="/api/iqkeyboardmanager"
   >
-    Add sample code to demonstrate how to use your product.
+    Explore the complete API documentation
+  </Card>
+</CardGroup>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card
+    title="Automatic Keyboard Avoidance"
+    icon="keyboard"
+  >
+    Automatically adjusts view position when keyboard appears, preventing text fields from being covered
   </Card>
   <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
+    title="One Line Setup"
+    icon="bolt"
   >
-    Display images and other media.
+    Just enable `IQKeyboardManager.shared.isEnabled = true` and you're done
   </Card>
   <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
+    title="Modular Architecture"
+    icon="puzzle-piece"
   >
-    Write once and reuse across your docs.
+    Optional subspecs for toolbar, appearance, return key handling, and more
   </Card>
-</Columns>
+  <Card
+    title="Universal Compatibility"
+    icon="mobile"
+  >
+    Works with UIScrollView, UITableView, UICollectionView, and all orientations
+  </Card>
+</CardGroup>
 
-## Need inspiration?
+## Installation
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<CodeGroup>
+
+```ruby CocoaPods
+pod 'IQKeyboardManagerSwift'
+```
+
+```swift Swift Package Manager
+dependencies: [
+    .package(url: "https://github.com/hackiftekhar/IQKeyboardManager.git", from: "8.0.0")
+]
+```
+
+```ogdl Carthage
+github "hackiftekhar/IQKeyboardManager"
+```
+
+</CodeGroup>
+
+## Quick Example
+
+```swift AppDelegate.swift
+import IQKeyboardManagerSwift
+
+@UIApplicationMain
+class AppDelegate: UIResponder, UIApplicationDelegate {
+
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        
+        // Enable keyboard management
+        IQKeyboardManager.shared.isEnabled = true
+        
+        return true
+    }
+}
+```
+
+That's it! The keyboard will now automatically adjust to avoid covering your text fields.
+
+## Why IQKeyboardManager?
+
+<AccordionGroup>
+  <Accordion title="No More UIScrollView Headaches">
+    Automatically handles scroll views without any manual content inset adjustments or offset calculations.
+  </Accordion>
+  <Accordion title="No Subclassing Required">
+    Works with standard UIKit components—no need to subclass UITextField or UITextView.
+  </Accordion>
+  <Accordion title="Battle-Tested">
+    Used by thousands of iOS apps with over 16,000 GitHub stars and active maintenance since 2013.
+  </Accordion>
+  <Accordion title="Fully Customizable">
+    Configure keyboard distance, enable/disable per view controller, customize toolbar appearance, and more.
+  </Accordion>
+</AccordionGroup>
+
+## Optional Features
+
+Enable additional functionality through modular subspecs:
+
+- **Toolbar Manager**: Add Previous/Next/Done buttons above the keyboard
+- **Appearance**: Customize keyboard appearance (light/dark)
+- **Return Key Handling**: Automatically move between text fields
+- **Resign on Touch**: Dismiss keyboard when tapping outside
+- **IQTextView**: UITextView with placeholder support
+
+## Get Started
+
+<CardGroup cols={3}>
+  <Card
+    title="Introduction"
+    icon="book-open"
+    href="/introduction"
+  >
+    Learn about core concepts
+  </Card>
+  <Card
+    title="Guides"
+    icon="compass"
+    href="/guides/basic-setup"
+  >
+    Step-by-step tutorials
+  </Card>
+  <Card
+    title="Migration"
+    icon="arrow-right-arrow-left"
+    href="/migration/overview"
+  >
+    Upgrade from older versions
+  </Card>
+</CardGroup>
